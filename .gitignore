@@ -1,0 +1,121 @@
+# =============================================
+# GLOBAL / OS FILES
+# =============================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+
+# =============================================
+# ENVIRONMENT VARIABLES (WAJIB!)
+# =============================================
+.env
+.env.local
+.env.*.local
+*.env
+
+# =============================================
+# DEPENDENCIES & BUILD
+# =============================================
+
+# Go (Backend)
+server/vendor/
+server/*.exe
+server/*.exe~
+server/*.dll
+server/*.so
+server/*.dylib
+server/*.test
+server/*.out
+server/bin/
+server/dist/
+server/build/
+server/coverage.out
+server/*.coverprofile
+
+# Node.js / Frontend
+client/node_modules/
+client/dist/
+client/build/
+client/.cache/
+client/*.log
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+
+# =============================================
+# IDE / EDITOR
+# =============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.workspace
+*.code-workspace
+
+# =============================================
+# OS SPECIFIC
+# =============================================
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*.pid
+*.lock
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# =============================================
+# DATABASE
+# =============================================
+*.sqlite
+*.sqlite3
+*.db
+*.mdb
+*.accdb
+*.myd
+*.myi
+*.frm
+*.ibd
+
+# =============================================
+# MISC
+# =============================================
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Coverage reports
+*.html
+*.lcov
+
+# =============================================
+# DEPLOYMENT SPECIFIC
+# =============================================
+.DS_Store
+.vercel/
+.render/
+.netlify/
+
+# =============================================
+# DOCKER
+# =============================================
+docker-compose.override.yml
+*.dockerignore
+.docker/

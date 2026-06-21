@@ -1,0 +1,18 @@
+package database
+
+import (
+	"log"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+)
+
+func ConnectDB(dsn string) *sqlx.DB {
+	db, err := sqlx.Connect("mysql", dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	log.Println("Successfully connected to MariaDB")
+	return db
+}
