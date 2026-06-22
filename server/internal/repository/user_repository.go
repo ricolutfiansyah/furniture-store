@@ -42,10 +42,14 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user domain.User
-	query := `SELECT FROM users WHERE email = ?`
+	query := `SELECT * FROM users WHERE email = ?`
 	err := r.db.GetContext(ctx, &user, query, email)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
+
 	return &user, nil
 }

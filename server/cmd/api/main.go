@@ -45,7 +45,7 @@ func main() {
 		w.Write([]byte("Server is healthy and running"))
 	})
 
-	r.Route("api/v1", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 	})
 

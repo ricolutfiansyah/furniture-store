@@ -5,6 +5,7 @@ import (
 	"errors"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -46,6 +47,8 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 		Address:      req.Address,
 		Role:         "user",
 		IsActive:     true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	err = s.userRepo.Create(ctx, user)
