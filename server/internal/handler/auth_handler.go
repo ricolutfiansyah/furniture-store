@@ -35,3 +35,25 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		"message": "User registered successfully",
 	})
 }
+
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req service.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.authService.Login(r.Context(), &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"data":    resp,
+		"message": "Login successfull",
+	})
+}

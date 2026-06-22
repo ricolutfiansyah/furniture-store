@@ -66,6 +66,10 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `UPDATE users SET full_name = ?, phone = ?, address = ?, updatedAt = NOW() WHERE id = ?`
-	_, err := r.db.ExecContext(ctx, query, user.FullName, user.Phone, user.Address, user.ID)
+	_, err := r.db.ExecContext(ctx, query,
+		user.FullName,
+		user.Phone,
+		user.Address,
+		user.ID)
 	return err
 }

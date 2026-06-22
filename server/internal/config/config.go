@@ -21,9 +21,16 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port:      os.Getenv("PORT"),
-		DBUrl:     os.Getenv("DB_URL"),
-		JWTSecret: os.Getenv("JWTSecret"),
-		Env:       os.Getenv("ENV"),
+		Port:      getEnv("PORT", "8080"),
+		DBUrl:     getEnv("DB_URL", ""),
+		JWTSecret: getEnv("JWTSecret", "your-super-secret-key-change-in-production"),
+		Env:       getEnv("ENV", "development"),
 	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }

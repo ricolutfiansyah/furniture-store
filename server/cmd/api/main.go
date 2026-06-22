@@ -26,7 +26,7 @@ func main() {
 	defer db.Close()
 
 	userRepo := repository.NewUserRepository(db)
-	authService := service.NewAuthService(userRepo)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	authHandler := handler.NewAuthHandler(authService)
 
 	r := chi.NewRouter()
@@ -48,6 +48,7 @@ func main() {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
+		r.Post("/login", authHandler.Login)
 	})
 
 	fmt.Printf("Starting server on port %s...\n", cfg.Port)
