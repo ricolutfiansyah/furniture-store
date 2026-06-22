@@ -19,13 +19,14 @@ import (
 func main() {
 	cfg := config.Load()
 
-	db, _ := database.ConnectDB(cfg.DBUrl)
+	db, err := database.ConnectDB(cfg.DBUrl)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 	defer db.Close()
 
 	userRepo := repository.NewUserRepository(db)
-
 	authService := service.NewAuthService(userRepo)
-
 	authHandler := handler.NewAuthHandler(authService)
 
 	r := chi.NewRouter()
@@ -51,7 +52,7 @@ func main() {
 
 	fmt.Printf("Starting server on port %s...\n", cfg.Port)
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	err := http.ListenAndServe(addr, r)
+	err = http.ListenAndServe(addr, r)
 	if err != nil {
 		log.Fatal("Server failed to start: ", err)
 	}

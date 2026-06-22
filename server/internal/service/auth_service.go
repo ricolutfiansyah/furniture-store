@@ -4,15 +4,25 @@ import (
 	"context"
 	"errors"
 	"furniture-api/internal/domain"
-	"furniture-api/internal/repository"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
+type UserRepository interface {
+	FindByEmail(ctx context.Context, email string) (*domain.User, error)
+	Create(ctx context.Context, user *domain.User) error
+	FindById(ctx context.Context, id int) (*domain.User, error)
+	Update(ctx context.Context, user *domain.User) error
+}
+
 type AuthService struct {
-	userRepo *repository.UserRepository
+	userRepo UserRepository
+}
+
+func NewAuthService(userRepo UserRepository) *AuthService {
+	return &AuthService{userRepo: userRepo}
 }
 
 type RegisterRequest struct {
@@ -21,10 +31,6 @@ type RegisterRequest struct {
 	FullName string `json:"full_name"`
 	Phone    string `json:"phone"`
 	Address  string `json:"address"`
-}
-
-func NewAuthService(userRepo *repository.UserRepository) *AuthService {
-	return &AuthService{userRepo: userRepo}
 }
 
 func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*domain.User, error) {
