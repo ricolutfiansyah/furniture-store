@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"bytes"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -30,7 +31,7 @@ func (ns *NullString) Scan(value any) error {
 		return nil
 	case sql.RawBytes:
 		ns.String = string(v)
-		ns.Valid = false
+		ns.Valid = true
 		return nil
 	default:
 		ns.String = ""
@@ -47,14 +48,14 @@ func (ns NullString) Value() (driver.Value, error) {
 }
 
 func (ns NullString) MarshalJSON() ([]byte, error) {
-	if ns.Valid {
-		return json.Marshal(ns.String)
+	if !ns.Valid {
+		return []byte("null"), nil
 	}
 	return json.Marshal(ns.String)
 }
 
 func (ns *NullString) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if bytes.Equal(data, []byte("null")) {
 		ns.Valid = false
 		ns.String = ""
 		return nil
@@ -74,6 +75,13 @@ func NewNullString(s string) NullString {
 	return NullString{
 		String: s,
 		Valid:  s != "",
+	}
+}
+
+func NewEmptyNullString() NullString {
+	return NullString{
+		String: "",
+		Valid:  true,
 	}
 }
 

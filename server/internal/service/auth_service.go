@@ -58,6 +58,8 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 		Address:      domain.NewNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	err = s.userRepo.Create(ctx, user)
