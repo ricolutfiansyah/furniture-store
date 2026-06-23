@@ -8,6 +8,7 @@ import (
 	"furniture-api/internal/config"
 	"furniture-api/internal/handler"
 	"furniture-api/internal/infrastructure/database"
+	"furniture-api/internal/middleware"
 	"furniture-api/internal/repository"
 	"furniture-api/internal/service"
 
@@ -46,9 +47,17 @@ func main() {
 		w.Write([]byte("Server is healthy and running"))
 	})
 
+	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware)
+
+			r.Get("/users/me", authHandler.GetProfile)
+		})
 	})
 
 	fmt.Printf("Starting server on port %s...\n", cfg.Port)
