@@ -24,7 +24,7 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIDFloat, ok := claims["user_id"].(float64)
+	userIDFloat, ok := claims["sub"].(float64)
 	if !ok {
 		http.Error(w, `{"error": "Invalid user ID in token"}`, http.StatusUnauthorized)
 		return
