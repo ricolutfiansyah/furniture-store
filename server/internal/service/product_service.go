@@ -33,3 +33,30 @@ func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) ([]doma
 
 	return s.productRepo.GetAll(ctx, pageSize, offset)
 }
+
+func (s *ProductService) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+	product, err := s.productRepo.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+	if product == nil {
+		return nil, nil
+	}
+
+	variants, err := s.productRepo.GetVariantsByProductID(ctx, product.ID)
+	if err == nil {
+		product.Variants = variants
+	}
+
+	images, err := s.productRepo.GetImagesByProductID(ctx, product.ID)
+	if err == nil {
+		product.Images = images
+	}
+
+	categories, err := s.productRepo.GetCategoryByID(ctx, product.CategoryID)
+	if err == nil {
+		product.Category = categories
+	}
+
+	return product, nil
+}
