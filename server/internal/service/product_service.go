@@ -22,14 +22,14 @@ func NewProductService(productRepo ProductRepository) *ProductService {
 }
 
 func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) ([]domain.Product, error) {
-	if page > 1 {
+	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 {
 		pageSize = 10
 	}
 
-	offset := (pageSize - 1) * pageSize
+	offset := (page - 1) * pageSize
 
 	return s.productRepo.GetAll(ctx, pageSize, offset)
 }
