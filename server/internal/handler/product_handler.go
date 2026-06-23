@@ -49,7 +49,7 @@ func (h *ProductHandler) GetAllProduct(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *ProductHandler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) GetProductBySlug(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	if slug == "" {
 		http.Error(w, "Product slug is required", http.StatusNotFound)

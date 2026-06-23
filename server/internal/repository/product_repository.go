@@ -23,7 +23,7 @@ func (r *productRepository) GetAll(ctx context.Context, limit, offset int) ([]do
 	return products, err
 }
 
-func (r *productRepository) GetBySluq(ctx context.Context, slug string) (*domain.Product, error) {
+func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
 	var product domain.Product
 	query := `SELECT * FROM products WHERE slug = ? AND is_active = TRUE`
 	err := r.db.GetContext(ctx, &product, query, slug)

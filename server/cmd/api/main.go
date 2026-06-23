@@ -27,8 +27,13 @@ func main() {
 	defer db.Close()
 
 	userRepo := repository.NewUserRepository(db)
+	productRepo := repository.NewProductRepository(db)
+
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	productService := service.NewProductService(productRepo)
+
 	authHandler := handler.NewAuthHandler(authService)
+	productHandler := handler.NewProductHandler(productService)
 
 	r := chi.NewRouter()
 
@@ -52,6 +57,9 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
+
+		r.Get("/products", productHandler.GetAllProduct)
+		r.Get("/products/{slug}", productHandler.GetProductBySlug)
 
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware)
