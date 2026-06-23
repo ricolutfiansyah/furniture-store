@@ -30,6 +30,18 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
+func (s *AuthService) GetProfile(ctx context.Context, userID int) (*domain.User, error) {
+	user, err := s.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, nil
+	}
+	return user, nil
+}
+
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

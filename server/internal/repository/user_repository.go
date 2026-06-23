@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"furniture-api/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -45,7 +46,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	query := `SELECT * FROM users WHERE email = ?`
 	err := r.db.GetContext(ctx, &user, query, email)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err

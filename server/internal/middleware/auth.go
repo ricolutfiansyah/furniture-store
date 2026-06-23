@@ -28,13 +28,11 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			}
 
 			tokenString := parts[1]
+			hmacSecret := []byte(jwtSecret)
 
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, jwt.ErrSignatureInvalid
-				}
-				return []byte(jwtSecret), nil
-			})
+				return hmacSecret, nil
+			}, jwt.WithValidMethods([]string{"HS256"}))
 
 			if err != nil || !token.Valid {
 				http.Error(w, `{"error": "Invalid or expired token"}`, http.StatusUnauthorized)

@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"furniture-api/internal/middleware"
 	"furniture-api/internal/service"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandler struct {
@@ -12,6 +15,34 @@ type AuthHandler struct {
 
 func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
+}
+
+func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
+	if !ok {
+		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		http.Error(w, `{"error": "Invalid user ID in token"}`, http.StatusUnauthorized)
+		return
+	}
+	userID := int(userIDFloat)
+
+	user, err := h.authService.GetProfile(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"data":    &user,
+		"message": "Profile retrieved successfully",
+	})
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
