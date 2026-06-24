@@ -57,6 +57,15 @@ func (r *orderRepository) CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx
 	return nil
 }
 
+func (r *orderRepository) CreateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status, notes, createdBy string) error {
+	query := `
+        INSERT INTO order_statuses (order_id, status, notes, created_by)
+        VALUES (?, ?, ?, ?)
+    `
+	_, err := tx.ExecContext(ctx, query, orderID, status, notes, createdBy)
+	return err
+}
+
 func (r *orderRepository) GetOrdersByUserID(ctx context.Context, userID int) ([]domain.Order, error) {
 	var orders []domain.Order
 	query := `SELECT * FROM orders WHERE id = ?`

@@ -5,6 +5,7 @@ import (
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/service"
 	"net/http"
+	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -62,5 +63,30 @@ func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"data":    orders,
 		"message": "Orders retrieved successfully",
+	})
+}
+
+func (h *OrderHandler) GetOrderDetail(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	orderID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
+
+	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
+	userID := int(claims["user_id"].(float64))
+
+	order, err := h.orderService.GetOrderDetail(r.Context(), userID, orderID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"data":    order,
+		"message": "Order detail retrieved successfully",
 	})
 }
