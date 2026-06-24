@@ -42,3 +42,51 @@ func (r *orderRepository) CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, or
 	order.ID = int(id)
 	return nil
 }
+
+func (r *orderRepository) CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx, item *domain.OrderItem) error {
+	query := `
+		INSERT INTO order_items (order_id, variant_id, quantity, price_per_item, total_price)
+		VALUES (?, ?, ?, ?, ?)
+	`
+	result, err := tx.ExecContext(ctx, query, item.OrderID, item.VariantID, item.Quantity, item.PricePerItem, item.TotalPrice)
+	if err != nil {
+		return err
+	}
+	id, _ := result.LastInsertId()
+	item.ID = int(id)
+	return nil
+}
+
+func (r *orderRepository) GetOrdersByUserID(ctx context.Context, userID int) ([]domain.Order, error) {
+	var orders []domain.Order
+	query := `SELECT * FROM orders WHERE id = ?`
+	err := r.db.SelectContext(ctx, &orders, query, userID)
+	return orders, err
+}
+
+func (r *orderRepository) GetOrderByID(ctx context.Context, orderID int) (*domain.Order, error) {
+	var order domain.Order
+	query := `SELECT * FROM orders WHERE id = ?`
+	err := r.db.GetContext(ctx, &order, query, orderID)
+	return &order, err
+}
+
+func (r *orderRepository) GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error) {
+	var items []domain.OrderItem
+	query := `SELECT * FROM order_items WHERE order_id = ?`
+	err := r.db.SelectContext(ctx, &items, query, orderID)
+	return items, err
+}
+
+func (r *orderRepository) GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error) {
+	var statuses []domain.OrderStatus
+	query := `SELECT * FROM order_statuses WHERE id = ? ORDER BY created_at ASC`
+	err := r.db.SelectContext(ctx, &statuses, query, orderID)
+	return statuses, err
+}
+
+func (r *orderRepository) UpdateOrderStatus(ctx context.Context, orderID int, status string) error {
+	query := `UPDATE orders SET status = ? WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, status, orderID)
+	return err
+}

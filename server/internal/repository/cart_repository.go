@@ -69,6 +69,23 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 	return cart, nil
 }
 
+func (r *cartRepository) GetCartItemsByUserID(ctx context.Context, userID int) ([]domain.CartItem, error) {
+	var items []domain.CartItem
+	query := `SELECT ci.* FROM cart_items ci JOIN carts c ON ci.cart_id = c.id WHERE c.user_id = ?`
+	err := r.db.SelectContext(ctx, &items, query, userID)
+	return items, err
+}
+
+func (r *cartRepository) GetCartByUserID(ctx context.Context, userID int) (*domain.Cart, error) {
+	var cart domain.Cart
+	query := `SELECT * FROM carts WHERE user_id = ?`
+	err := r.db.GetContext(ctx, &cart, query, userID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &cart, err
+}
+
 func (r *cartRepository) AddItem(ctx context.Context, cartID int, variantID int, quantity int, PriceAtTime float64) error {
 	query := `
 		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 

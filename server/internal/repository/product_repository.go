@@ -73,3 +73,17 @@ func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 	}
 	return &variant, nil
 }
+
+func (r *productRepository) DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error {
+	query := `UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?`
+	result, err := r.db.ExecContext(ctx, query, quantity, variantID, quantity)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return err
+	}
+	return nil
+}
