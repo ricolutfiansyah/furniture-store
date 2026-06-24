@@ -90,3 +90,27 @@ func (h *CartHandler) UpdateQuantity(w http.ResponseWriter, r *http.Request) {
 		"message": "Quantity updated successfully",
 	})
 }
+
+func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	itemID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		return
+	}
+
+	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
+	userID := int(claims["sub"].(float64))
+
+	err = h.cartService.RemoveItem(r.Context(), userID, itemID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Item removed from cart",
+	})
+}
