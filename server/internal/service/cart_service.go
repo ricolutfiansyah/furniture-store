@@ -56,3 +56,11 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *AddToCartR
 	err = s.cartRepo.AddItem(ctx, cart.ID, req.VariantID, req.Quantity, totalPrice)
 	return err
 }
+
+func (s *CartService) GetCart(ctx context.Context, userID int) (*domain.Cart, error) {
+	return s.cartRepo.GetCartWithItems(ctx, userID)
+}
+
+func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) error {
+	return s.cartRepo.RemoveItem(ctx, cartItemID)
+}
