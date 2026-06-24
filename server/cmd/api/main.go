@@ -29,14 +29,17 @@ func main() {
 	// --- Repository ---
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
+	cartRepo := repository.NewCartRepository(db)
 
 	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
+	cartService := service.NewCartService(cartRepo, productRepo)
 
 	// --- Handler ---
 	authHandler := handler.NewAuthHandler(authService)
 	productHandler := handler.NewProductHandler(productService)
+	cartHandler := handler.NewCartHandler(cartService)
 
 	r := chi.NewRouter()
 
@@ -68,6 +71,11 @@ func main() {
 			r.Use(authMiddleware)
 
 			r.Get("/users/me", authHandler.GetProfile)
+
+			r.Get("/cart", cartHandler.GetCart)
+			r.Post("/cart", cartHandler.AddToCart)
+			r.Put("/cart/items/{id}", cartHandler.UpdateQuantity)
+			r.Delete("/cart/items/{id}", cartHandler.RemoveItem)
 		})
 	})
 

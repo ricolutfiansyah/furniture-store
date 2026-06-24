@@ -7,16 +7,12 @@ import (
 )
 
 type CartRepository interface {
-	GetOrCreateCart(ctx context.Context, UserID int) (*domain.CartItem, error)
+	GetOrCreateCart(ctx context.Context, UserID int) (*domain.Cart, error)
 	GetCartWithItems(ctx context.Context, userID int) (*domain.Cart, error)
 	AddItem(ctx context.Context, cartID, variantID, quantity int, priceAtTime float64) error
 	UpdateItemQuantity(ctx context.Context, cartItemID, quantity int) error
 	RemoveItem(ctx context.Context, cartItemID int) error
 	ClearCart(ctx context.Context, cartID int) error
-}
-
-type ProductVariantRepository interface {
-	GetByID(ctx context.Context, id int) (*domain.ProductVariant, error)
 }
 
 type CartService struct {

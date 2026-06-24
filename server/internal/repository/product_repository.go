@@ -60,3 +60,16 @@ func (r *productRepository) GetCategoryByID(ctx context.Context, categoryID int)
 
 	return &category, nil
 }
+
+func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.ProductVariant, error) {
+	var variant domain.ProductVariant
+	query := `SELECT * FROM product_variants WHERE id = ?`
+	err := r.db.GetContext(ctx, &variant, query, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &variant, nil
+}

@@ -13,6 +13,10 @@ type ProductRepository interface {
 	GetCategoryByID(ctx context.Context, categoryID int) (*domain.Category, error)
 }
 
+type ProductVariantRepository interface {
+	GetByID(ctx context.Context, id int) (*domain.ProductVariant, error)
+}
+
 type ProductService struct {
 	productRepo ProductRepository
 }
