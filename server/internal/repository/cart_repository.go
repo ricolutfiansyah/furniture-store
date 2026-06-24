@@ -21,22 +21,22 @@ func (r *cartRepository) GetOrCreateCart(ctx context.Context, userID int) (*doma
 	query := `SELECT * FROM carts WHERE user_id = ?`
 	err := r.db.GetContext(ctx, &cart, query, userID)
 
-	if err == sql.ErrNoRows {
-		insertQuery := `INSERT INTO carts (user_id) VALUES (?)`
-		result, err := r.db.ExecContext(ctx, insertQuery, userID)
-		if err != nil {
-			return nil, err
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return nil, err
-		}
-		cart.ID = int(id)
-		cart.UserID = userID
-		return &cart, nil
-	}
-
 	if err != nil {
+		if err == sql.ErrNoRows {
+			insertQuery := `INSERT INTO carts (user_id) VALUES (?)`
+			result, err := r.db.ExecContext(ctx, insertQuery, userID)
+			if err != nil {
+				return nil, err
+			}
+			id, err := result.LastInsertId()
+			if err != nil {
+				return nil, err
+			}
+			cart.ID = int(id)
+			cart.UserID = userID
+			return &cart, nil
+		}
+
 		return nil, err
 	}
 
@@ -44,7 +44,7 @@ func (r *cartRepository) GetOrCreateCart(ctx context.Context, userID int) (*doma
 }
 
 func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*domain.Cart, error) {
-	cart, err := r.GetCartWithItems(ctx, userID)
+	cart, err := r.GetOrCreateCart(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
