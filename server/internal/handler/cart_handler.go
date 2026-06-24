@@ -39,3 +39,21 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 		"message": "Item added to cart successfully",
 	})
 }
+
+func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
+	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
+	userID := int(claims["sub"].(float64))
+
+	cart, err := h.cartService.GetCart(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"data":    cart,
+		"message": "Cart retrieved successfully",
+	})
+}
