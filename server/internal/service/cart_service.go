@@ -61,7 +61,7 @@ func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, qu
 	if quantity <= 0 {
 		return errors.New("Quantity must be greater than 0")
 	}
-	return s.UpdateQuantity(ctx, userID, cartItemID, quantity)
+	return s.cartRepo.UpdateItemQuantity(ctx, cartItemID, quantity)
 }
 
 func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) error {

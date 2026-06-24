@@ -73,15 +73,15 @@ func (r *cartRepository) AddItem(ctx context.Context, cartID int, variantID int,
 	query := `
 		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 
 		VALUES (?, ?, ?, ?)
-		ON DUPLICATES KEY UPDATE quantity = quantity + ?
+		ON DUPLICATE KEY UPDATE quantity = quantity + ?
 	`
-	_, err := r.db.ExecContext(ctx, query, cartID, variantID, quantity, PriceAtTime)
+	_, err := r.db.ExecContext(ctx, query, cartID, variantID, quantity, PriceAtTime, quantity)
 	return err
 }
 
 func (r *cartRepository) UpdateItemQuantity(ctx context.Context, cartItemID, quantity int) error {
 	query := `UPDATE cart_items SET quantity = ? WHERE id = ? AND quantity > 0`
-	_, err := r.db.ExecContext(ctx, query, cartItemID)
+	_, err := r.db.ExecContext(ctx, query, quantity, cartItemID)
 	return err
 }
 
