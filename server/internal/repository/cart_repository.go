@@ -59,8 +59,8 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 	// WHERE ci.cart_id = ?
 	// `
 
-	itemsQuery := `SELECT * FROM cart_items WHERE id = ?`
-	err = r.db.SelectContext(ctx, &items, itemsQuery, userID)
+	itemsQuery := `SELECT * FROM cart_items WHERE cart_id = ?`
+	err = r.db.SelectContext(ctx, &items, itemsQuery, cart.ID)
 	if err != nil {
 		return nil, err
 	}

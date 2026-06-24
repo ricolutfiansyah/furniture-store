@@ -50,7 +50,7 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
+	userID := int(claims["sub"].(float64))
 
 	orders, err := h.orderService.GetUserOrders(r.Context(), userID)
 	if err != nil {
@@ -75,7 +75,7 @@ func (h *OrderHandler) GetOrderDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["user_id"].(float64))
+	userID := int(claims["sub"].(float64))
 
 	order, err := h.orderService.GetOrderDetail(r.Context(), userID, orderID)
 	if err != nil {

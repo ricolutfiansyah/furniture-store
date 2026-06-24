@@ -54,6 +54,13 @@ func (r *orderRepository) CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx
 	}
 	id, _ := result.LastInsertId()
 	item.ID = int(id)
+
+	selectQuery := `SELECT created_at FROM order_items WHERE id = ?`
+	err = tx.QueryRowContext(ctx, selectQuery, id).Scan(&item.CreatedAt)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -68,7 +75,7 @@ func (r *orderRepository) CreateOrderStatusWithTx(ctx context.Context, tx *sqlx.
 
 func (r *orderRepository) GetOrdersByUserID(ctx context.Context, userID int) ([]domain.Order, error) {
 	var orders []domain.Order
-	query := `SELECT * FROM orders WHERE id = ?`
+	query := `SELECT * FROM orders WHERE user_id = ?`
 	err := r.db.SelectContext(ctx, &orders, query, userID)
 	return orders, err
 }

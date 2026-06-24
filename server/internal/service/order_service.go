@@ -127,6 +127,8 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRe
 		ShippingAddress: req.ShippingAddress,
 		PaymentMethod:   "bank_transfer",
 		Notes:           req.Notes,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	err = s.orderRepo.CreateOrderWithTx(ctx, tx, order)
