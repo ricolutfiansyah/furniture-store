@@ -90,3 +90,9 @@ func (r *cartRepository) RemoveItem(ctx context.Context, cartItemID int) error {
 	_, err := r.db.ExecContext(ctx, query, cartItemID)
 	return err
 }
+
+func (r *cartRepository) ClearCart(ctx context.Context, cartID int) error {
+	query := `DELETE FROM cart_items WHERE cart_id = ?`
+	_, err := r.db.ExecContext(ctx, query, cartID)
+	return err
+}
