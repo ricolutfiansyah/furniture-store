@@ -3,14 +3,14 @@ package domain
 import "time"
 
 type Category struct {
-	ID          int        `db:"id" json:"id"`
-	Name        string     `db:"name" json:"name"`
-	Slug        string     `db:"slug" json:"slug"`
-	Description string     `db:"description" json:"description"`
-	ParentID    NullString `db:"parent_id" json:"parent_id"`
-	ImageURL    string     `db:"image_url" json:"image_url"`
-	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
+	ID          int       `db:"id" json:"id"`
+	Name        string    `db:"name" json:"name"`
+	Slug        string    `db:"slug" json:"slug"`
+	Description string    `db:"description" json:"description"`
+	ParentID    *int      `db:"parent_id" json:"parent_id,omitempty"`
+	ImageURL    string    `db:"image_url" json:"image_url,omitempty"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type Product struct {

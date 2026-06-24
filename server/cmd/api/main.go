@@ -26,12 +26,15 @@ func main() {
 	}
 	defer db.Close()
 
+	// --- Repository ---
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
 
+	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
 
+	// --- Handler ---
 	authHandler := handler.NewAuthHandler(authService)
 	productHandler := handler.NewProductHandler(productService)
 
@@ -48,11 +51,11 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
+	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
+
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Server is healthy and running"))
 	})
-
-	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
