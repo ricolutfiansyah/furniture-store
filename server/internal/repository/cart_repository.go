@@ -69,8 +69,24 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 	return cart, nil
 }
 
-func (r *cartRepository) UpdateItemRepository(ctx context.Context, cartItemID int, quantity int) error {
+func (r *cartRepository) AddItem(ctx context.Context, cartID int, variantID int, quantity int, PriceAtTime float64) error {
+	query := `
+		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 
+		VALUES (?, ?, ?, ?)
+		ON DUPLICATES KEY UPDATE quantity = quantity + ?
+	`
+	_, err := r.db.ExecContext(ctx, query, cartID, variantID, quantity, PriceAtTime)
+	return err
+}
+
+func (r *cartRepository) UpdateItemQuantity(ctx context.Context, cartItemID, quantity int) error {
 	query := `UPDATE cart_items SET quantity = ? WHERE id = ? AND quantity > 0`
+	_, err := r.db.ExecContext(ctx, query, cartItemID)
+	return err
+}
+
+func (r *cartRepository) RemoveItem(ctx context.Context, cartItemID int) error {
+	query := `DELETE FROM cart_items WHERE id = ?`
 	_, err := r.db.ExecContext(ctx, query, cartItemID)
 	return err
 }
