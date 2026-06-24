@@ -61,6 +61,13 @@ func (s *CartService) GetCart(ctx context.Context, userID int) (*domain.Cart, er
 	return s.cartRepo.GetCartWithItems(ctx, userID)
 }
 
+func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, quantity int) error {
+	if quantity <= 0 {
+		return errors.New("Quantity must be greater than 0")
+	}
+	return s.UpdateQuantity(ctx, userID, cartItemID, quantity)
+}
+
 func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) error {
 	return s.cartRepo.RemoveItem(ctx, cartItemID)
 }
