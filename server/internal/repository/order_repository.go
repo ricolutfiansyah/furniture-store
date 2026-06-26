@@ -106,3 +106,15 @@ func (r *orderRepository) UpdateOrderStatus(ctx context.Context, orderID int, st
 	_, err := r.db.ExecContext(ctx, query, status, orderID)
 	return err
 }
+
+func (r *orderRepository) UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status, timestampColumn string) error {
+	query := `UPDATE orders SET status = ?, updated_at = NOW()`
+
+	if timestampColumn != "" {
+		query += `, ` + timestampColumn + ` = NOW()`
+	}
+	query += ` WHERE id = ?`
+
+	_, err := tx.ExecContext(ctx, query, status, orderID)
+	return err
+}

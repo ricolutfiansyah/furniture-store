@@ -29,6 +29,7 @@ type OrderRepository interface {
 	GetOrderByID(ctx context.Context, orderID int) (*domain.Order, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
+	UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status string, timestampColumn string) error
 }
 
 type OrderService struct {
@@ -61,6 +62,11 @@ type CheckoutResponse struct {
 	Order      domain.Order       `json:"order"`
 	Items      []domain.OrderItem `json:"items"`
 	GrandTotal float64            `json:"grand_total"`
+}
+
+type UpdateOrderStatusReq struct {
+	Status string `json:"status"`
+	Notes  string `json:"notes"`
 }
 
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
@@ -199,4 +205,37 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) 
 	}
 
 	return order, nil
+}
+
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req UpdateOrderStatusReq, adminName string) error {
+	validStatuses := map[string]string{
+		"paid":       "paid_at",
+		"processing": "",
+		"shipped":    "shipped_at",
+		"delivered":  "delivered_at",
+		"cancelled":  "",
+	}
+
+	timestampCol, ok := validStatuses[req.Status]
+	if !ok {
+		return errors.New("Invalid status")
+	}
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = s.orderRepo.UpdateOrderStatusWithTx(ctx, tx, orderID, req.Status, timestampCol)
+	if err != nil {
+		return err
+	}
+
+	err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, req.Notes, adminName)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

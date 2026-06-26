@@ -34,7 +34,7 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *AddToCartR
 		return errors.New("Quantity must be greater than 0")
 	}
 
-	variant, err := s.variantRepo.GetByID(ctx, userID)
+	variant, err := s.variantRepo.GetByID(ctx, req.VariantID)
 	if err != nil {
 		return errors.New("Variant not found")
 	}

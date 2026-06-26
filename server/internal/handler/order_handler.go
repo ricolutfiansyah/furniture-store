@@ -90,3 +90,32 @@ func (h *OrderHandler) GetOrderDetail(w http.ResponseWriter, r *http.Request) {
 		"message": "Order detail retrieved successfully",
 	})
 }
+
+func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	orderID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
+
+	var req service.UpdateOrderStatusReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	adminName := "admin"
+
+	err = h.orderService.UpdateOrderStatus(r.Context(), orderID, req, adminName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"message": "Order status updated successfully",
+	})
+}

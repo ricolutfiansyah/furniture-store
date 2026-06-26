@@ -50,14 +50,6 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 	}
 
 	var items []domain.CartItem
-	// query := `SELECT ci.*,
-	// pv.*,
-	// p.id, as product_id, p.name as product_name, p.slug as product_slug, p.base_price
-	// FROM cart_items ci
-	// JOIN prodict_variants pv ON ci.variant_id = pv.id
-	// JOIN products p ON pv.product_id = p.id
-	// WHERE ci.cart_id = ?
-	// `
 
 	itemsQuery := `SELECT * FROM cart_items WHERE cart_id = ?`
 	err = r.db.SelectContext(ctx, &items, itemsQuery, cart.ID)

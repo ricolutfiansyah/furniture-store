@@ -83,6 +83,7 @@ func main() {
 			r.Post("/orders/checkout", orderHandler.Checkout)
 			r.Get("/orders", orderHandler.GetOrders)
 			r.Get("/orders/{id}", orderHandler.GetOrderDetail)
+			r.Get("/orders/{id}/status", orderHandler.UpdateStatus)
 		})
 	})
 
