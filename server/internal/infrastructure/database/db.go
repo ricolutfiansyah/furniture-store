@@ -10,7 +10,7 @@ import (
 func ConnectDB(dsn string) (*sqlx.DB, error) {
 	db, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		return nil, err
 	}
 
 	db.SetMaxOpenConns(25)

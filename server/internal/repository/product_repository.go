@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"furniture-api/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -76,14 +77,15 @@ func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 
 func (r *productRepository) DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error {
 	query := `UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?`
-	result, err := r.db.ExecContext(ctx, query, quantity, variantID, quantity)
+	result, err := tx.ExecContext(ctx, query, quantity, variantID, quantity)
 	if err != nil {
 		return err
 	}
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		return err
+		return errors.New("Insufficient stock")
 	}
+
 	return nil
 }

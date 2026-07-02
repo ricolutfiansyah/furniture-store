@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"furniture-api/internal/domain"
+	"furniture-api/internal/nullable"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -66,8 +67,8 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 		Email:        req.Email,
 		PasswordHash: string(hashed),
 		FullName:     req.FullName,
-		Phone:        domain.NewNullString(req.Phone),
-		Address:      domain.NewNullString(req.Address),
+		Phone:        nullable.NewNullString(req.Phone),
+		Address:      nullable.NewNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
 		CreatedAt:    time.Now(),
