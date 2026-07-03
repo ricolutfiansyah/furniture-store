@@ -26,7 +26,7 @@ func Load() *Config {
 		DBUrl:          getEnv("DB_URL", ""),
 		JWTSecret:      getEnv("JWTSecret", ""),
 		Env:            getEnv("ENV", "development"),
-		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
+		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"http://localhost:5173"}),
 	}
 
 	if cfg.JWTSecret == "" {

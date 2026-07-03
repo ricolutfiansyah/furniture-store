@@ -28,7 +28,7 @@ func (j *JSON) Scan(value any) error {
 	case string:
 		bytes = []byte(v)
 	default:
-		return errors.New("Unsupported type for JSON")
+		return errors.New("unsupported type for JSON")
 	}
 
 	return json.Unmarshal(bytes, j)

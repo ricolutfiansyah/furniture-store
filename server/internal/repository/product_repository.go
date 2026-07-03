@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"furniture-api/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -17,23 +18,51 @@ func NewProductRepository(db *sqlx.DB) *productRepository {
 	return &productRepository{db: db}
 }
 
-func (r *productRepository) GetAll(ctx context.Context, limit, offset int) ([]domain.Product, error) {
+func (r *productRepository) GetActive(ctx context.Context, limit, offset int) ([]domain.Product, error) {
+	const query = `
+		SELECT id, category_id, name, slug, description, base_price, sku, 
+		weight_kg, is_active, views, created_at, updated_at 
+		FROM products 
+		WHERE is_active = TRUE 
+		ORDER BY created_at DESC 
+		LIMIT ? OFFSET ?`
+
 	var products []domain.Product
-	query := `SELECT * FROM products WHERE is_active = TRUE ORDER BY created_at DESC LIMIT ? OFFSET ?`
 	err := r.db.SelectContext(ctx, &products, query, limit, offset)
-	return products, err
+	if err != nil {
+		return nil, fmt.Errorf("get active products: %w", err)
+	}
+
+	return products, nil
+}
+
+func (r *productRepository) CountActive(ctx context.Context) (int, error) {
+	const query = `SELECT COUNT(*) FROM products WHERE is_active = TRUE`
+
+	var count int
+	err := r.db.GetContext(ctx, &count, query)
+	if err != nil {
+		return 0, fmt.Errorf("count active products: %w", err)
+	}
+
+	return count, nil
 }
 
 func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+	query := `SELECT id, category_id, name, slug, description, base_price, sku, 
+				weight_kg, is_active, views, created_at, updated_at, 
+			FROM products 
+			WHERE slug = ? AND is_active = TRUE`
+
 	var product domain.Product
-	query := `SELECT * FROM products WHERE slug = ? AND is_active = TRUE`
 	err := r.db.GetContext(ctx, &product, query, slug)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrProductNotFound
+		}
+		return nil, fmt.Errorf("get product by slug: %w", err)
 	}
+
 	return &product, nil
 }
 
@@ -45,10 +74,18 @@ func (r *productRepository) GetVariantsByProductID(ctx context.Context, productI
 }
 
 func (r *productRepository) GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error) {
+	const query = `SELECT id, product_id, variant_id, image_url, is_primary, sort_order, created_at 
+					FROM product_images 
+					WHERE product_id = ? 
+					ORDER_BY is_active DESC, sort_order ASC`
+
 	var images []domain.ProductImage
-	query := `SELECT * FROM product_images WHERE product_id = ? ORDER_ID = ? is_active DESC, sort_order ASC`
 	err := r.db.SelectContext(ctx, &images, query, productID)
-	return images, err
+	if err != nil {
+		return nil, fmt.Errorf("get images by product id: %w", err)
+	}
+
+	return images, nil
 }
 
 func (r *productRepository) GetCategoryByID(ctx context.Context, categoryID int) (*domain.Category, error) {

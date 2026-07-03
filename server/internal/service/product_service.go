@@ -6,7 +6,7 @@ import (
 )
 
 type ProductRepository interface {
-	GetAll(ctx context.Context, limit, offset int) ([]domain.Product, error)
+	GetActive(ctx context.Context, limit, offset int) ([]domain.Product, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
 	GetVariantsByProductID(ctx context.Context, productID int) ([]domain.ProductVariant, error)
 	GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error)
@@ -35,7 +35,7 @@ func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) ([]doma
 
 	offset := (page - 1) * pageSize
 
-	return s.productRepo.GetAll(ctx, pageSize, offset)
+	return s.productRepo.GetActive(ctx, pageSize, offset)
 }
 
 func (s *ProductService) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
