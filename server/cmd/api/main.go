@@ -1,15 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"furniture-api/internal/config"
 	"furniture-api/internal/handler"
 	"furniture-api/internal/infrastructure/database"
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/repository"
+	"furniture-api/internal/response"
 	"furniture-api/internal/service"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +30,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing database: %v", err)
+		}
+	}()
 
 	// --- Repository ---
 	userRepo := repository.NewUserRepository(db)
@@ -60,7 +70,11 @@ func main() {
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Server is healthy and running"))
+		if err := db.Ping(); err != nil {
+			response.WriteError(w, http.StatusServiceUnavailable, "database unavailale")
+			return
+		}
+		response.WriteSuccess(w, http.StatusOK, nil, "server is healthy")
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -87,10 +101,34 @@ func main() {
 		})
 	})
 
-	fmt.Printf("Starting server on port %s...\n", cfg.Port)
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	err = http.ListenAndServe(addr, r)
-	if err != nil {
-		log.Fatal("server failed to start: ", err)
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	go func() {
+		log.Printf("starting server on port %s...", cfg.Port)
+		if err = srv.ListenAndServe(); err != nil {
+			log.Fatal("server failed to start: ", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("shutting down server")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("server forced to shutdown: %v", err)
+	}
+
+	log.Println("server exited gracefully")
 }

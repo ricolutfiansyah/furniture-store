@@ -1,4 +1,4 @@
-package handler
+package response
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	json.NewEncoder(w).Encode(payload)
 }
 
-func writeSuccess(w http.ResponseWriter, status int, data any, message string) {
+func WriteSuccess(w http.ResponseWriter, status int, data any, message string) {
 	writeJSON(w, status, SuccessResponse{
 		Success: true,
 		Data:    data,
@@ -30,7 +30,7 @@ func writeSuccess(w http.ResponseWriter, status int, data any, message string) {
 	})
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
+func WriteError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{
 		Success: false,
 		Error:   message,
