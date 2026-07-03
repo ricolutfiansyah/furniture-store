@@ -74,16 +74,42 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *AddToCartR
 }
 
 func (s *CartService) GetCart(ctx context.Context, userID int) (*domain.Cart, error) {
-	return s.cartRepo.GetCartWithItems(ctx, userID)
+	cart, err := s.cartRepo.GetCartWithItems(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get cart: %w", err)
+	}
+
+	return cart, nil
 }
 
 func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, quantity int) error {
 	if quantity <= 0 {
-		return errors.New("Quantity must be greater than 0")
+		if err := s.cartRepo.RemoveItem(ctx, userID, cartItemID); err != nil {
+			if errors.Is(err, repository.ErrCartItemNotFound) {
+				return ErrCartItemNotFound
+			}
+			return fmt.Errorf("remove item: %w", err)
+		}
+		return nil
 	}
-	return s.cartRepo.UpdateItemQuantity(ctx, cartItemID, quantity)
+
+	if err := s.cartRepo.UpdateItemQuantity(ctx, userID, cartItemID, quantity); err != nil {
+		if errors.Is(err, repository.ErrCartItemNotFound) {
+			return ErrCartItemNotFound
+		}
+		return fmt.Errorf("update item quantity: %w", err)
+	}
+
+	return nil
 }
 
 func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) error {
-	return s.cartRepo.RemoveItem(ctx, cartItemID)
+	if err := s.cartRepo.RemoveItem(ctx, userID, cartItemID); err != nil {
+		if errors.Is(err, repository.ErrCartItemNotFound) {
+			return ErrCartItemNotFound
+		}
+		return fmt.Errorf("remove item: %w", err)
+	}
+
+	return nil
 }

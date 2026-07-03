@@ -88,7 +88,7 @@ func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx sqlx.Tx,
 	return items, nil
 }
 
-func (r *cartRepository) AddItem(ctx context.Context, cartID int, variantID int, quantity int, PriceAtTime float64) (*domain.CartItem, error) {
+func (r *cartRepository) AddItem(ctx context.Context, cartID, variantID, quantity int, PriceAtTime float64) (*domain.CartItem, error) {
 	const query = `
 		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 
 		VALUES (?, ?, ?, ?)
