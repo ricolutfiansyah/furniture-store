@@ -49,8 +49,9 @@ func (r *productRepository) CountActive(ctx context.Context) (int, error) {
 }
 
 func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
-	query := `SELECT id, category_id, name, slug, description, base_price, sku, 
-				weight_kg, is_active, views, created_at, updated_at, 
+	query := `
+			SELECT id, category_id, name, slug, description, base_price, sku, 
+			weight_kg, is_active, views, created_at, updated_at, 
 			FROM products 
 			WHERE slug = ? AND is_active = TRUE`
 
@@ -66,8 +67,28 @@ func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain
 	return &product, nil
 }
 
+func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.Product, error) {
+	query := `
+		SELECT id, category_id, name, slug, description, base_price, sku,
+		weight_kg, is_active, views, created_at, updated_at
+		FROM products
+		WHERE id = ?`
+
+	var product domain.Product
+	err := r.db.GetContext(ctx, &product, query, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrProductNotFound
+		}
+		return nil, fmt.Errorf("get product by id: %w", err)
+	}
+
+	return &product, nil
+}
+
 func (r *productRepository) GetVariantsByProductID(ctx context.Context, productID int) ([]domain.ProductVariant, error) {
-	query := `SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, sku_variant, 
+	const query = `
+				SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, sku_variant, 
 				weight_kg, is_active, created_at, updated_at 
 				FROM product_variants 
 				WHERE product_id = ? AND is_active = TRUE`
@@ -82,10 +103,11 @@ func (r *productRepository) GetVariantsByProductID(ctx context.Context, productI
 }
 
 func (r *productRepository) GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error) {
-	const query = `SELECT id, product_id, variant_id, image_url, is_primary, sort_order, created_at 
-					FROM product_images 
-					WHERE product_id = ? 
-					ORDER_BY is_active DESC, sort_order ASC`
+	const query = `
+				SELECT id, product_id, variant_id, image_url, is_primary, sort_order, created_at 
+				FROM product_images 
+				WHERE product_id = ? 
+				ORDER_BY is_active DESC, sort_order ASC`
 
 	var images []domain.ProductImage
 	err := r.db.SelectContext(ctx, &images, query, productID)
@@ -112,7 +134,8 @@ func (r *productRepository) GetCategoryByID(ctx context.Context, categoryID int)
 }
 
 func (r *productRepository) GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error) {
-	query := `SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, 
+	const query = `
+				SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, 
 				sku_variant, weight_kg, is_active, created_at, updated_at 
 				FROM product_variants 
 				WHERE id = ?`

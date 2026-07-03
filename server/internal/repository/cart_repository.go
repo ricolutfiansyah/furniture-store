@@ -88,16 +88,6 @@ func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx sqlx.Tx,
 	return items, nil
 }
 
-func (r *cartRepository) GetCartByUserID(ctx context.Context, userID int) (*domain.Cart, error) {
-	var cart domain.Cart
-	query := `SELECT * FROM carts WHERE user_id = ?`
-	err := r.db.GetContext(ctx, &cart, query, userID)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &cart, err
-}
-
 func (r *cartRepository) AddItem(ctx context.Context, cartID int, variantID int, quantity int, PriceAtTime float64) (*domain.CartItem, error) {
 	const query = `
 		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 
@@ -130,14 +120,17 @@ func (r *cartRepository) findByCartAndVariant(ctx context.Context, cartID, varia
 	return &item, nil
 }
 
-func (r *cartRepository) UpdateItemQuantity(ctx context.Context, cartItemID, quantity int) error {
-	const query = `UPDATE cart_items SET quantity = ? WHERE id = ?`
+func (r *cartRepository) UpdateItemQuantity(ctx context.Context, userID, cartItemID, quantity int) error {
+	const query = `
+				UPDATE cart_items ci 
+				JOIN carts c ON ci.cart_id = c.id
+				SET ci.quantity = ?
+				WHERE ci.id = ? AND c.user_id = ?`
 
-	result, err := r.db.ExecContext(ctx, query, quantity, cartItemID)
+	result, err := r.db.ExecContext(ctx, query, quantity, cartItemID, userID)
 	if err != nil {
 		return fmt.Errorf("update item quantity: %w", err)
 	}
-
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("update item quantity rows affected: %w", err)
@@ -149,17 +142,19 @@ func (r *cartRepository) UpdateItemQuantity(ctx context.Context, cartItemID, qua
 	return nil
 }
 
-func (r *cartRepository) RemoveItem(ctx context.Context, cartItemID int) error {
-	const query = `DELETE FROM cart_items WHERE id = ?`
+func (r *cartRepository) RemoveItem(ctx context.Context, userID, cartItemID int) error {
+	const query = `
+				DELETE ci FROM cart_items ci
+				JOIN carts c ON ci.cart_id = c.id 
+				WHERE ci.id = ? AND c.user_id = ?`
 
-	result, err := r.db.ExecContext(ctx, query, cartItemID)
+	result, err := r.db.ExecContext(ctx, query, cartItemID, userID)
 	if err != nil {
 		return fmt.Errorf("remove cart item: %w", err)
 	}
-
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("remove cart item rows affected")
+		return fmt.Errorf("remove cart item rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
 		return ErrCartItemNotFound
@@ -168,8 +163,11 @@ func (r *cartRepository) RemoveItem(ctx context.Context, cartItemID int) error {
 	return nil
 }
 
-func (r *cartRepository) ClearCart(ctx context.Context, cartID int) error {
+func (r *cartRepository) ClearCartWithTx(ctx context.Context, tx sqlx.Tx, cartID int) error {
 	query := `DELETE FROM cart_items WHERE cart_id = ?`
-	_, err := r.db.ExecContext(ctx, query, cartID)
-	return err
+
+	if _, err := r.db.ExecContext(ctx, query, cartID); err != nil {
+		return fmt.Errorf("clear cart: %w", err)
+	}
+	return nil
 }

@@ -13,6 +13,7 @@ type ProductRepository interface {
 	GetActive(ctx context.Context, limit, offset int) ([]domain.Product, error)
 	CountActive(ctx context.Context) (int, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
+	GetByID(ctx context.Context, id int) (*domain.Product, error)
 	GetVariantsByProductID(ctx context.Context, productID int) ([]domain.ProductVariant, error)
 	GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error)
 	GetCategoryByID(ctx context.Context, categoryID int) (*domain.Category, error)
