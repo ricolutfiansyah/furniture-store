@@ -3,34 +3,54 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port      string
-	DBUrl     string
-	JWTSecret string
-	Env       string
+	Port           string
+	DBUrl          string
+	JWTSecret      string
+	Env            string
+	AllowedOrigins []string
 }
 
 func Load() *Config {
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: No .env file found, relying on system environment variables")
 	}
 
-	return &Config{
-		Port:      getEnv("PORT", "8080"),
-		DBUrl:     getEnv("DB_URL", ""),
-		JWTSecret: getEnv("JWTSecret", "your-super-secret-key-change-in-production"),
-		Env:       getEnv("ENV", "development"),
+	cfg := &Config{
+		Port:           getEnv("PORT", "8080"),
+		DBUrl:          getEnv("DB_URL", ""),
+		JWTSecret:      getEnv("JWTSecret", ""),
+		Env:            getEnv("ENV", "development"),
+		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
 	}
+
+	if cfg.JWTSecret == "" {
+		log.Fatal("JWT_SECRET is required but not set")
+	}
+	if cfg.DBUrl == "" {
+		log.Fatal("DB_URL is required but not set")
+	}
+
+	return cfg
 }
 
 func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	return value
+}
+
+func getEnvAsSlice(key string, defaultValue []string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return strings.Split(value, ",")
 }
