@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"furniture-api/internal/middleware"
+	"furniture-api/internal/repository"
 	"furniture-api/internal/service"
 	"net/http"
 
@@ -20,29 +22,27 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
 	if !ok {
-		http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	userIDFloat, ok := claims["sub"].(float64)
+	publicID, ok := claims["sub"].(string)
 	if !ok {
-		http.Error(w, `{"error": "Invalid user ID in token"}`, http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "invalid user id in token")
 		return
 	}
-	userID := int(userIDFloat)
 
-	user, err := h.authService.GetProfile(r.Context(), userID)
+	user, err := h.authService.GetProfile(r.Context(), publicID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		if errors.Is(err, repository.ErrUserNotFound) {
+			writeError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    &user,
-		"message": "Profile retrieved successfully",
-	})
+	writeSuccess(w, http.StatusOK, user, "profile retrieved successfully")
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {

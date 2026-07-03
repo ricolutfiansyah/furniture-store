@@ -19,6 +19,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
 	FindById(ctx context.Context, id int) (*domain.User, error)
+	FindByPublicId(ctx context.Context, publicID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 }
 
@@ -34,8 +35,8 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
-func (s *AuthService) GetProfile(ctx context.Context, userID int) (*UserResponse, error) {
-	user, err := s.userRepo.FindById(ctx, userID)
+func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*UserResponse, error) {
+	user, err := s.userRepo.FindByPublicId(ctx, publicID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +86,7 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 	return user, nil
 }
 
+// consistency response time
 const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMy.MrqR9U2v.9Q1M4x9jXjxTV0YQ4LgLW"
 
 func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
@@ -94,9 +96,9 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
 			_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(req.Password))
-
-			return nil, fmt.Errorf("fund user by email: %w", err)
+			return nil, ErrInvalidCredentials
 		}
+		return nil, fmt.Errorf("fund user by email: %w", err)
 	}
 
 	if !user.IsActive {

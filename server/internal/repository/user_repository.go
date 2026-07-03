@@ -80,6 +80,21 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 	return &user, nil
 }
 
+func (r *userRepository) FindByPublicId(ctx context.Context, publicID string) (*domain.User, error) {
+	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE public_id = ?`
+
+	var user domain.User
+	err := r.db.GetContext(ctx, &user, query, publicID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("find user by public ID: %w", err)
+	}
+
+	return &user, nil
+}
+
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	const query = `UPDATE users SET full_name = ?, phone = ?, address = ?, updated_at = NOW() WHERE id = ?`
 
