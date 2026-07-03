@@ -67,8 +67,6 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
-
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Ping(); err != nil {
 			response.WriteError(w, http.StatusServiceUnavailable, "database unavailale")
@@ -76,6 +74,8 @@ func main() {
 		}
 		response.WriteSuccess(w, http.StatusOK, nil, "server is healthy")
 	})
+
+	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)

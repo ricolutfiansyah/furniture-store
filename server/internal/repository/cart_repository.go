@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"furniture-api/internal/domain"
 
 	"github.com/jmoiron/sqlx"
@@ -17,29 +19,36 @@ func NewCartRepository(db *sqlx.DB) *cartRepository {
 }
 
 func (r *cartRepository) GetOrCreateCart(ctx context.Context, userID int) (*domain.Cart, error) {
-	var cart domain.Cart
-	query := `SELECT * FROM carts WHERE user_id = ?`
-	err := r.db.GetContext(ctx, &cart, query, userID)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			insertQuery := `INSERT INTO carts (user_id) VALUES (?)`
-			result, err := r.db.ExecContext(ctx, insertQuery, userID)
-			if err != nil {
-				return nil, err
-			}
-			id, err := result.LastInsertId()
-			if err != nil {
-				return nil, err
-			}
-			cart.ID = int(id)
-			cart.UserID = userID
-			return &cart, nil
-		}
-
-		return nil, err
+	cart, err := r.findByUserID(ctx, userID)
+	if err == nil {
+		return cart, nil
+	}
+	if !errors.Is(err, ErrCartNotFound) {
+		return nil, fmt.Errorf("get cart: %w", err)
 	}
 
+	insertQuery := `INSERT INTO carts (user_id) VALUES (?)`
+	if _, err := r.db.ExecContext(ctx, insertQuery, userID); err != nil {
+		if isDuplicateKeyError(err, "user_id") {
+			return r.findByUserID(ctx, userID)
+		}
+		return nil, fmt.Errorf("create cart: %w", err)
+	}
+
+	return r.findByUserID(ctx, userID)
+}
+
+func (r *cartRepository) findByUserID(ctx context.Context, userID int) (*domain.Cart, error) {
+	const query = `SELECT id, user_id, created_at, updated_at FROM carts WEHERE user_id = ?`
+
+	var cart domain.Cart
+	err := r.db.GetContext(ctx, &cart, query, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCartNotFound
+		}
+		return nil, fmt.Errorf("find cart by user id: %w", err)
+	}
 	return &cart, nil
 }
 
