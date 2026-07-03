@@ -22,7 +22,7 @@ func main() {
 
 	db, err := database.ConnectDB(cfg.DBUrl)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer db.Close()
 
@@ -91,6 +91,6 @@ func main() {
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	err = http.ListenAndServe(addr, r)
 	if err != nil {
-		log.Fatal("Server failed to start: ", err)
+		log.Fatal("server failed to start: ", err)
 	}
 }
