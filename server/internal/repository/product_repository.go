@@ -67,10 +67,18 @@ func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain
 }
 
 func (r *productRepository) GetVariantsByProductID(ctx context.Context, productID int) ([]domain.ProductVariant, error) {
+	query := `SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, sku_variant, 
+				weight_kg, is_active, created_at, updated_at 
+				FROM product_variants 
+				WHERE product_id = ? AND is_active = TRUE`
+
 	var variants []domain.ProductVariant
-	query := `SELECT * FROM product_variants WHERE product_id = ? AND is_active = TRUE`
 	err := r.db.SelectContext(ctx, &variants, query, productID)
-	return variants, err
+	if err != nil {
+		return nil, fmt.Errorf("get variants by product id: %w", err)
+	}
+
+	return variants, nil
 }
 
 func (r *productRepository) GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error) {
@@ -89,39 +97,48 @@ func (r *productRepository) GetImagesByProductID(ctx context.Context, productID 
 }
 
 func (r *productRepository) GetCategoryByID(ctx context.Context, categoryID int) (*domain.Category, error) {
+	query := `SELECT id, name, slug, description, parent_id, image_url, created_at, updated_at FROM categories WHERE id = ?`
+
 	var category domain.Category
-	query := `SELECT * FROM categories WHERE id = ?`
 	err := r.db.GetContext(ctx, &category, query, categoryID)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCategoryNotFound
+		}
+		return nil, fmt.Errorf("get category by id: %w", err)
 	}
 
 	return &category, nil
 }
 
-func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.ProductVariant, error) {
+func (r *productRepository) GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error) {
+	query := `SELECT id, product_id, variant_name, attributes, additional_price, stock_quantity, 
+				sku_variant, weight_kg, is_active, created_at, updated_at 
+				FROM product_variants 
+				WHERE id = ?`
+
 	var variant domain.ProductVariant
-	query := `SELECT * FROM product_variants WHERE id = ?`
 	err := r.db.GetContext(ctx, &variant, query, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrVariantNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("get variant by id: %w", err)
 	}
 	return &variant, nil
 }
 
 func (r *productRepository) DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error {
 	query := `UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?`
+
 	result, err := tx.ExecContext(ctx, query, quantity, variantID, quantity)
 	if err != nil {
-		return err
+		return fmt.Errorf("decrease stock: %w", err)
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
 	if rowsAffected == 0 {
-		return errors.New("Insufficient stock")
+		return ErrInsufficientStock
 	}
 
 	return nil

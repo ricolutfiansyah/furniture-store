@@ -17,7 +17,7 @@ type CartRepositoryForOrder interface {
 }
 
 type ProductVariantRepositoryForOrder interface {
-	GetByID(ctx context.Context, id int) (*domain.ProductVariant, error)
+	GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error)
 	DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error
 }
 
@@ -90,7 +90,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRe
 	var orderItems []domain.OrderItem
 
 	for _, cartItem := range cartItems {
-		variant, err := s.variantRepo.GetByID(ctx, cartItem.VariantID)
+		variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
 		if err != nil || variant == nil {
 			return nil, fmt.Errorf("Variant %d not found", cartItem.VariantID)
 		}

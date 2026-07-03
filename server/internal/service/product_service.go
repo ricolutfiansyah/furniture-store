@@ -14,7 +14,7 @@ type ProductRepository interface {
 }
 
 type ProductVariantRepository interface {
-	GetByID(ctx context.Context, id int) (*domain.ProductVariant, error)
+	GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error)
 }
 
 type ProductService struct {
