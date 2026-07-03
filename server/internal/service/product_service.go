@@ -12,7 +12,7 @@ import (
 type ProductRepository interface {
 	GetActive(ctx context.Context, limit, offset int) ([]domain.Product, error)
 	CountActive(ctx context.Context) (int, error)
-	GetProductBySlug(ctx context.Context, slug string) (*domain.Product, error)
+	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
 	GetVariantsByProductID(ctx context.Context, productID int) ([]domain.ProductVariant, error)
 	GetImagesByProductID(ctx context.Context, productID int) ([]domain.ProductImage, error)
 	GetCategoryByID(ctx context.Context, categoryID int) (*domain.Category, error)
@@ -55,8 +55,8 @@ func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) (*Produ
 	}, nil
 }
 
-func (s *ProductService) GetProductBySlug(ctx context.Context, slug string) (*domain.Product, error) {
-	product, err := s.productRepo.GetProductBySlug(ctx, slug)
+func (s *ProductService) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+	product, err := s.productRepo.GetBySlug(ctx, slug)
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
 			return nil, ErrProductNotFound

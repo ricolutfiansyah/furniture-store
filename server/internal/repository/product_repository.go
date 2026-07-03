@@ -48,7 +48,7 @@ func (r *productRepository) CountActive(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (r *productRepository) GetProductBySlug(ctx context.Context, slug string) (*domain.Product, error) {
+func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
 	query := `SELECT id, category_id, name, slug, description, base_price, sku, 
 				weight_kg, is_active, views, created_at, updated_at, 
 			FROM products 

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"encoding/json"
+	"errors"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
 	"log"
@@ -54,25 +54,20 @@ func (h *ProductHandler) GetAllProduct(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) GetProductBySlug(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	if slug == "" {
-		http.Error(w, "Product slug is required", http.StatusNotFound)
+		response.WriteError(w, http.StatusBadRequest, "product slug is required")
 		return
 	}
 
-	product, err := h.productService.GetProductBySlug(r.Context(), slug)
+	product, err := h.productService.GetBySlug(r.Context(), slug)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrProductNotFound) {
+			response.WriteError(w, http.StatusNotFound, "product not found")
+			return
+		}
+		log.Printf("get product by slug %q: %v", slug, err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	if product == nil {
-		http.Error(w, "Product not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    product,
-		"message": "Product retrieved successfully",
-	})
+	response.WriteSuccess(w, http.StatusOK, product, "product retrieved successfully")
 }
