@@ -6,6 +6,7 @@ import (
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/repository"
 	"furniture-api/internal/service"
+	"log"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -48,23 +49,25 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req service.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request Body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	user, err := h.authService.Register(r.Context(), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		switch {
+		case errors.Is(err, service.ErrEmailAlreadyRegistered):
+			writeError(w, http.StatusConflict, "email already registered")
+		case errors.Is(err, service.ErrPasswordTooShort):
+			writeError(w, http.StatusBadRequest, "password must be at least 8 characters")
+		default:
+			log.Printf("register error: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    user,
-		"message": "User registered successfully",
-	})
+	writeSuccess(w, http.StatusCreated, user, "user registered successfully")
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -76,15 +79,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Login(r.Context(), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		switch {
+		case errors.Is(err, service.ErrInvalidCredentials):
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+		default:
+			log.Printf("login error: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    resp,
-		"message": "Login successfull",
-	})
+	writeSuccess(w, http.StatusOK, resp, "login successfull")
 }
