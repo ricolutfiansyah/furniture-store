@@ -54,3 +54,7 @@ func getEnvAsSlice(key string, defaultValue []string) []string {
 	}
 	return strings.Split(value, ",")
 }
+
+func (c *Config) IsProduction() bool {
+	return c.Env == "production"
+}
