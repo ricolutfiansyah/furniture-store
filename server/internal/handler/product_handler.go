@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"furniture-api/internal/response"
 	"furniture-api/internal/service"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -31,21 +33,21 @@ func (h *ProductHandler) GetAllProduct(w http.ResponseWriter, r *http.Request) {
 			limit = val
 		}
 	}
+	if limit > 100 {
+		limit = 100
+	}
 
-	products, err := h.productService.GetAll(r.Context(), page, limit)
+	result, err := h.productService.GetAll(r.Context(), page, limit)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("get all products: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    products,
-		"message": "Products retrieved successfully",
-		"page":    page,
-		"limit":   limit,
-		"total":   len(products),
+	response.WriteSuccessWithMeta(w, http.StatusOK, result.Products, "products retrieved successfully", response.PaginationMeta{
+		Page:  result.Page,
+		Limit: result.PageSize,
+		Total: result.Total,
 	})
 }
 
@@ -56,7 +58,7 @@ func (h *ProductHandler) GetProductBySlug(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	product, err := h.productService.GetBySlug(r.Context(), slug)
+	product, err := h.productService.GetProductBySlug(r.Context(), slug)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -5,10 +5,17 @@ import (
 	"net/http"
 )
 
+type PaginationMeta struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
+	Total int `json:"total"`
+}
+
 type SuccessResponse struct {
 	Success bool   `json:"success"`
 	Data    any    `json:"data"`
 	Message string `json:"message"`
+	Meta    any    `json:"meta,omitempty"`
 }
 
 type ErrorResponse struct {
@@ -27,6 +34,15 @@ func WriteSuccess(w http.ResponseWriter, status int, data any, message string) {
 		Success: true,
 		Data:    data,
 		Message: message,
+	})
+}
+
+func WriteSuccessWithMeta(w http.ResponseWriter, status int, data any, message string, meta any) {
+	writeJSON(w, status, SuccessResponse{
+		Success: true,
+		Data:    data,
+		Message: message,
+		Meta:    meta,
 	})
 }
 
