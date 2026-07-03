@@ -34,21 +34,14 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
-var (
-	ErrEmailAlreadyRegistered = errors.New("email already registered")
-	ErrPasswordTooShort       = errors.New("password must be at least 8 characters")
-)
+func (s *AuthService) GetProfile(ctx context.Context, userID int) (*UserResponse, error) {
+	user, err := s.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *AuthService) GetProfile(ctx context.Context, userID int) (*domain.User, error) {
-	return s.userRepo.FindById(ctx, userID)
-}
-
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	FullName string `json:"full_name"`
-	Phone    string `json:"phone"`
-	Address  string `json:"address"`
+	resp := toUserResponse(user)
+	return &resp, nil
 }
 
 func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*domain.User, error) {
@@ -92,47 +85,43 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 	return user, nil
 }
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type LoginResponse struct {
-	Token string      `json:"token"`
-	User  domain.User `json:"user"`
-}
+const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMy.MrqR9U2v.9Q1M4x9jXjxTV0YQ4LgLW"
 
 func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, repository.ErrUserNotFound) {
+			_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(req.Password))
+
+			return nil, fmt.Errorf("fund user by email: %w", err)
+		}
 	}
 
-	if user == nil {
-		return nil, errors.New("Invalid credentials")
+	if !user.IsActive {
+		return nil, ErrInvalidCredentials
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
-	if err != nil {
-		return nil, errors.New("Invalid credentials")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, ErrInvalidCredentials
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(24 * time.Hour).Unix(),
-		"iat": time.Now().Unix(),
-
+		"sub":   user.PublicID,
+		"exp":   time.Now().Add(24 * time.Hour).Unix(),
+		"iat":   time.Now().Unix(),
 		"email": user.Email,
 		"role":  user.Role,
 	})
 
 	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sign token: %w", err)
 	}
 
 	return &LoginResponse{
 		Token: tokenString,
-		User:  *user,
+		User:  toUserResponse(user),
 	}, nil
 }

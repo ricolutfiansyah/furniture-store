@@ -31,8 +31,11 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 		user.Role,
 	)
 	if err != nil {
-		if isDuplicateKeyError(err) {
+		if isDuplicateKeyError(err, "email") {
 			return ErrEmailAlreadyRegistered
+		}
+		if isDuplicateKeyError(err, "public_id") {
+			return fmt.Errorf("public id collision: %w", err)
 		}
 		return fmt.Errorf("create user: %w", err)
 	}
