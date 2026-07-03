@@ -52,7 +52,12 @@ func getEnvAsSlice(key string, defaultValue []string) []string {
 	if value == "" {
 		return defaultValue
 	}
-	return strings.Split(value, ",")
+
+	parts := strings.Split(value, ",")
+	for i, p := range parts {
+		parts[i] = strings.TrimSpace(p)
+	}
+	return parts
 }
 
 func (c *Config) IsProduction() bool {
