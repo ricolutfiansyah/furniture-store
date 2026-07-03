@@ -3,8 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/nullable"
+	"furniture-api/internal/repository"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -31,16 +34,13 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
-func (s *AuthService) GetProfile(ctx context.Context, userID int) (*domain.User, error) {
-	user, err := s.userRepo.FindById(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
+var (
+	ErrEmailAlreadyRegistered = errors.New("email already registered")
+	ErrPasswordTooShort       = errors.New("password must be at least 8 characters")
+)
 
-	if user == nil {
-		return nil, nil
-	}
-	return user, nil
+func (s *AuthService) GetProfile(ctx context.Context, userID int) (*domain.User, error) {
+	return s.userRepo.FindById(ctx, userID)
 }
 
 type RegisterRequest struct {
@@ -52,14 +52,23 @@ type RegisterRequest struct {
 }
 
 func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*domain.User, error) {
-	existing, _ := s.userRepo.FindByEmail(ctx, req.Email)
+	req.Password = strings.ToLower(strings.TrimSpace(req.Password))
+
+	if len(req.Password) < 8 {
+		return nil, ErrPasswordTooShort
+	}
+
+	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, fmt.Errorf("check existing email: %w", err)
+	}
 	if existing != nil {
-		return nil, errors.New("Email already registered")
+		return nil, ErrEmailAlreadyRegistered
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
 	user := &domain.User{
@@ -71,13 +80,13 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 		Address:      nullable.NewNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
 	}
 
-	err = s.userRepo.Create(ctx, user)
-	if err != nil {
-		return nil, err
+	if err = s.userRepo.Create(ctx, user); err != nil {
+		if errors.Is(err, repository.ErrEmailAlreadyRegistered) {
+			return nil, ErrEmailAlreadyRegistered
+		}
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	return user, nil

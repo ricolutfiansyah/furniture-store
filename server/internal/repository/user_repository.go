@@ -18,8 +18,6 @@ func NewUserRepository(db *sqlx.DB) *userRepository {
 	return &userRepository{db: db}
 }
 
-var ErrUserNotFound = errors.New("user not found")
-
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `INSERT INTO users (public_id, email, password_hash, full_name, phone, address, role) VALUES (?, ?, ?, ?, ?, ?, ?)`
 
@@ -33,12 +31,15 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 		user.Role,
 	)
 	if err != nil {
-		return err
+		if isDuplicateKeyError(err) {
+			return ErrEmailAlreadyRegistered
+		}
+		return fmt.Errorf("create user: %w", err)
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return err
+		return fmt.Errorf("get last insert id: %w", err)
 	}
 
 	user.ID = int(id)
@@ -47,8 +48,9 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
-	var user domain.User
 	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE email = ?`
+
+	var user domain.User
 	err := r.db.GetContext(ctx, &user, query, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -61,8 +63,9 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 }
 
 func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, error) {
-	var user domain.User
 	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE id = ?`
+
+	var user domain.User
 	err := r.db.GetContext(ctx, &user, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
