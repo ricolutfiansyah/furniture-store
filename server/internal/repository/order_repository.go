@@ -213,3 +213,17 @@ func (r *orderRepository) UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.
 
 	return nil
 }
+
+func (r *orderRepository) GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.Tx, orderID int) (string, error) {
+	const query = `SELECT status FROM orders WHERE id = ? FOR UPDATE`
+
+	var status string
+	if err := tx.GetContext(ctx, &status, query, orderID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrOrderNotFound
+		}
+		return "", fmt.Errorf("get order status for update: %w", err)
+	}
+
+	return status, nil
+}

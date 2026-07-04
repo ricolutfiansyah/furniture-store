@@ -13,16 +13,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type CartRepositoryForOrder interface {
-	GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error)
-	ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error
-}
-
-type ProductVariantRepositoryForOrder interface {
-	GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error)
-	DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error
-}
-
 type OrderRepository interface {
 	CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, order *domain.Order) error
 	CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx, item *domain.OrderItem) error
@@ -34,6 +24,17 @@ type OrderRepository interface {
 	GetOrderByIDForAdmin(ctx context.Context, orderID int) (*domain.Order, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
+	GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.Tx, orderID int) (string, error)
+}
+
+type CartRepositoryForOrder interface {
+	GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error)
+	ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error
+}
+
+type ProductVariantRepositoryForOrder interface {
+	GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error)
+	DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error
 }
 
 type OrderService struct {
@@ -55,22 +56,6 @@ func NewOrderService(
 		variantRepo: variantRepo,
 		db:          db,
 	}
-}
-
-type CheckoutRequest struct {
-	ShippingAddress string `json:"shipping_address"`
-	Notes           string `json:"notes"`
-}
-
-type CheckoutResponse struct {
-	Order      domain.Order       `json:"order"`
-	Items      []domain.OrderItem `json:"items"`
-	GrandTotal float64            `json:"grand_total"`
-}
-
-type UpdateOrderStatusReq struct {
-	Status string `json:"status"`
-	Notes  string `json:"notes"`
 }
 
 const taxRate = 0.12
@@ -183,7 +168,12 @@ func generateOrderNumber() string {
 }
 
 func (s *OrderService) GetUserOrders(ctx context.Context, userID int) ([]domain.Order, error) {
-	return s.orderRepo.GetOrdersByUserID(ctx, userID)
+	orders, err := s.orderRepo.GetOrdersByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user order: %w", err)
+	}
+
+	return orders, nil
 }
 
 func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) (*domain.Order, error) {
@@ -212,35 +202,67 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) 
 	return order, nil
 }
 
-func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req UpdateOrderStatusReq, adminName string) error {
-	validStatuses := map[string]string{
-		"paid":       "paid_at",
-		"processing": "",
-		"shipped":    "shipped_at",
-		"delivered":  "delivered_at",
-		"cancelled":  "",
-	}
+var orderStatusTransitions = map[string][]string{
+	"pending":    {"paid", "canceled"},
+	"paid":       {"processing", "canceled", "refunded"},
+	"processing": {"shipped", "canceled"},
+	"shipped":    {"delivered"},
+	"delivered":  {"refunded"},
+	"canceled":   {},
+	"refunded":   {},
+}
 
-	timestampCol, ok := validStatuses[req.Status]
-	if !ok {
-		return errors.New("Invalid status")
+var orderStatusTimestampColumn = map[string]string{
+	"paid":      "paid_at",
+	"shipped":   "shipped_at",
+	"delivered": "delivered_at",
+}
+
+func isValidStatusTransitions(from, to string) bool {
+	for _, allowed := range orderStatusTransitions[from] {
+		if allowed == to {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req UpdateOrderStatusReq) error {
+	if _, ok := orderStatusTransitions[req.Status]; !ok {
+		return fmt.Errorf("%w: %q", ErrInvalidOrderStatus, req.Status)
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("begin update status transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	err = s.orderRepo.UpdateOrderStatusWithTx(ctx, tx, orderID, req.Status, timestampCol)
+	currentStatus, err := s.orderRepo.GetOrderStatusForUpdate(ctx, tx, orderID)
 	if err != nil {
-		return err
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return ErrOrderNotFound
+		}
+		return fmt.Errorf("get current order status: %w", err)
 	}
 
-	err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, req.Notes, adminName)
-	if err != nil {
-		return err
+	if !isValidStatusTransitions(currentStatus, req.Status) {
+		return fmt.Errorf("%w: %s -> %s", ErrInvalidStatusTransition, currentStatus, req.Status)
 	}
 
-	return tx.Commit()
+	timestampCol := orderStatusTimestampColumn[req.Status]
+
+	if err = s.orderRepo.UpdateOrderStatusWithTx(ctx, tx, orderID, req.Status, timestampCol); err != nil {
+		return fmt.Errorf("update order status: %w", err)
+	}
+
+	if err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, toNullString(req.Notes), "admin"); err != nil {
+		return fmt.Errorf("create order status history: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit update status transaction: %w", err)
+	}
+
+	return nil
 }
