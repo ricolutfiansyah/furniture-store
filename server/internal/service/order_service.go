@@ -7,6 +7,7 @@ import (
 	"furniture-api/internal/domain"
 	"furniture-api/internal/nullable"
 	"furniture-api/internal/repository"
+	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -29,7 +30,7 @@ type OrderRepository interface {
 	UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status string, timestampColumn string) error
 
 	GetOrdersByUserID(ctx context.Context, userID int) ([]domain.Order, error)
-	GetOrderByID(ctx context.Context, orderID int) (*domain.Order, error)
+	GetOrderByID(ctx context.Context, userID, orderID int) (*domain.Order, error)
 	GetOrderByIDForAdmin(ctx context.Context, orderID int) (*domain.Order, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
@@ -78,7 +79,7 @@ const maxOrderNumberAttempts = 3
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("begin checkout transaction")
+		return nil, fmt.Errorf("begin checkout transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -141,7 +142,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRe
 	for attempt := 1; ; attempt++ {
 		order.OrderNumber = generateOrderNumber()
 		err = s.orderRepo.CreateOrderWithTx(ctx, tx, order)
-		if err != nil {
+		if err == nil {
 			break
 		}
 		if errors.Is(err, repository.ErrDuplicateOrderNumber) && attempt < maxOrderNumberAttempts {
@@ -186,25 +187,25 @@ func (s *OrderService) GetUserOrders(ctx context.Context, userID int) ([]domain.
 }
 
 func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) (*domain.Order, error) {
-	order, err := s.orderRepo.GetOrderByID(ctx, orderID)
+	order, err := s.orderRepo.GetOrderByID(ctx, userID, orderID)
 	if err != nil {
-		return nil, err
-	}
-	if order == nil {
-		return nil, errors.New("Order not found")
-	}
-
-	if order.UserID != userID {
-		return nil, errors.New("Unauthorized")
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("get order by id: %w", err)
 	}
 
 	items, err := s.orderRepo.GetOrderItemsByOrderID(ctx, orderID)
-	if err == nil {
+	if err != nil {
+		log.Printf("get items for order %d: %v", orderID, err)
+	} else {
 		order.Items = items
 	}
 
 	statuses, err := s.orderRepo.GetOrderStatusesByOrderID(ctx, orderID)
-	if err == nil {
+	if err != nil {
+		log.Printf("get statuses for order %d: %v", orderID, err)
+	} else {
 		order.Statuses = statuses
 	}
 
