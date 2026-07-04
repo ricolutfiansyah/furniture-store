@@ -53,6 +53,7 @@ func main() {
 
 	r := chi.NewRouter()
 
+	// CORS options
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE"},
@@ -64,6 +65,7 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
+	// server check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Ping(); err != nil {
 			response.WriteError(w, http.StatusServiceUnavailable, "database unavailale")
@@ -74,6 +76,7 @@ func main() {
 
 	authMiddleware := middleware.AuthMiddleware(cfg.JWTSecret, userRepo)
 
+	// Routes
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)

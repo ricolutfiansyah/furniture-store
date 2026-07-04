@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"furniture-api/internal/domain"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -16,7 +18,7 @@ func NewOrderRepository(db *sqlx.DB) *orderRepository {
 }
 
 func (r *orderRepository) CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, order *domain.Order) error {
-	query := `
+	const query = `
 		INSERT INTO orders
 			(user_id, order_number, total_amount, shipping_cost, tax, grand_total, 
 			status, shipping_address, payment_method, notes
@@ -35,30 +37,52 @@ func (r *orderRepository) CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, or
 		order.Notes,
 	)
 	if err != nil {
-		return err
+		if isDuplicateKeyError(err, "order_number") {
+			return ErrDuplicateOrderNumber
+		}
+		return fmt.Errorf("create order: %w", err)
 	}
 
-	id, _ := result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("create order last insert: %w", err)
+	}
+
+	var created struct {
+		CreatedAt time.Time `db:"created_at"`
+		UpdatedAt time.Time `db:"updated_at"`
+	}
+	const selectQuery = `SELECT created_at, updated_at FROM orders WHERE id = ?`
+	if err := tx.GetContext(ctx, &created, selectQuery, id); err != nil {
+		return fmt.Errorf("fetch created order timestamps: %w", err)
+	}
+
 	order.ID = int(id)
+	order.CreatedAt = created.CreatedAt
+	order.UpdatedAt = created.UpdatedAt
+
 	return nil
 }
 
 func (r *orderRepository) CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx, item *domain.OrderItem) error {
-	query := `
+	const query = `
 		INSERT INTO order_items (order_id, variant_id, quantity, price_per_item, total_price)
 		VALUES (?, ?, ?, ?, ?)
 	`
 	result, err := tx.ExecContext(ctx, query, item.OrderID, item.VariantID, item.Quantity, item.PricePerItem, item.TotalPrice)
 	if err != nil {
-		return err
+		return fmt.Errorf("create order item: %w", err)
 	}
-	id, _ := result.LastInsertId()
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("create order item last insert id: %w", err)
+	}
 	item.ID = int(id)
 
-	selectQuery := `SELECT created_at FROM order_items WHERE id = ?`
-	err = tx.QueryRowContext(ctx, selectQuery, id).Scan(&item.CreatedAt)
-	if err != nil {
-		return err
+	const selectQuery = `SELECT created_at FROM order_items WHERE id = ?`
+	if err = tx.GetContext(ctx, &item.CreatedAt, selectQuery, id); err != nil {
+		return fmt.Errorf("fetch created order item timestamp: %w", err)
 	}
 
 	return nil
