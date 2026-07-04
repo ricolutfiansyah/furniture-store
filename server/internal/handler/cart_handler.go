@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -47,7 +48,7 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrInsufficientStock):
 			response.WriteError(w, http.StatusConflict, "insufficient stock")
 		default:
-			log.Printf("add to cart: %w", err)
+			log.Printf("add to cart: %v", err)
 			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
@@ -57,53 +58,54 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
-
-	cart, err := h.cartService.GetCart(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"data":    cart,
-		"message": "Cart retrieved successfully",
-	})
+	cart, err := h.cartService.GetCart(r.Context(), authUser.ID)
+	if err != nil {
+		log.Printf("get cart: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteSuccess(w, http.StatusOK, cart, "cart retrieved successfully")
 }
 
 func (h *CartHandler) UpdateQuantity(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := chi.URLParam(r, "id")
 	itemID, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid item ID")
 		return
 	}
 
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
-
-	var req struct {
-		Quantity int `json:"quantity"`
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
+
+	var req service.UpdateQuantityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	err = h.cartService.UpdateQuantity(r.Context(), userID, itemID, req.Quantity)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err = h.cartService.UpdateQuantity(r.Context(), authUser.ID, itemID, req.Quantity); err != nil {
+		switch {
+		case errors.Is(err, service.ErrCartItemNotFound):
+			response.WriteError(w, http.StatusNotFound, "cart item not found")
+		default:
+			log.Printf("update quantity: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Quantity updated successfully",
-	})
+	response.WriteSuccess(w, http.StatusOK, nil, "quantity updated successfully")
 }
 
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
