@@ -13,9 +13,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type contextKey string
+type userContextKey struct{}
 
-const UserContextKey contextKey = "user"
+var UserContextKey = userContextKey{}
 
 type AuthenticatedUser struct {
 	ID       int
@@ -69,7 +69,7 @@ func AuthMiddleware(jwtSecret string, userRepo UserFinder) func(http.Handler) ht
 					response.WriteError(w, http.StatusUnauthorized, "user not found")
 					return
 				}
-				log.Printf("auth middleware find user: %w", err)
+				log.Printf("auth middleware find user: %v", err)
 				response.WriteError(w, http.StatusInternalServerError, "internal server error")
 				return
 			}
@@ -91,11 +91,6 @@ func AuthMiddleware(jwtSecret string, userRepo UserFinder) func(http.Handler) ht
 	}
 }
 
-func GetUserFromContext(ctx context.Context) (AuthenticatedUser, bool) {
-	user, ok := ctx.Value(UserContextKey).(AuthenticatedUser)
-	return user, ok
-}
-
 func AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, ok := GetUserFromContext(r.Context())
@@ -111,4 +106,9 @@ func AdminMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func GetUserFromContext(ctx context.Context) (AuthenticatedUser, bool) {
+	user, ok := ctx.Value(UserContextKey).(AuthenticatedUser)
+	return user, ok
 }

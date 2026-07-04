@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"furniture-api/internal/middleware"
+	"furniture-api/internal/response"
 	"furniture-api/internal/service"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -19,26 +22,38 @@ func NewCartHandler(cartService *service.CartService) *CartHandler {
 }
 
 func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+	}
 
 	var req service.AddToCartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid body request")
 		return
 	}
 
-	err := h.cartService.AddToCart(r.Context(), userID, &req)
+	if req.VariantID <= 0 {
+		response.WriteError(w, http.StatusBadRequest, "variant id is required")
+	}
+
+	err := h.cartService.AddToCart(r.Context(), authUser.ID, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		switch {
+		case errors.Is(err, service.ErrInvalidQuantity):
+			response.WriteError(w, http.StatusBadRequest, "quantity must be greater than 0")
+		case errors.Is(err, service.ErrVariantNotFound):
+			response.WriteError(w, http.StatusNotFound, "variant not found")
+		case errors.Is(err, service.ErrInsufficientStock):
+			response.WriteError(w, http.StatusConflict, "insufficient stock")
+		default:
+			log.Printf("add to cart: %w", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"message": "Item added to cart successfully",
-	})
+	response.WriteSuccess(w, http.StatusCreated, nil, "item added to cart successfully")
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {

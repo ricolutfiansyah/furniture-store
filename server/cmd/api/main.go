@@ -45,7 +45,7 @@ func main() {
 	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
-	cartService := service.NewCartService(cartRepo, productRepo)
+	cartService := service.NewCartService(cartRepo)
 	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, db)
 
 	// --- Handler ---

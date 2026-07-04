@@ -9,8 +9,6 @@ import (
 	"furniture-api/internal/service"
 	"log"
 	"net/http"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandler struct {
@@ -22,19 +20,13 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
+	authUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
 		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	publicID, ok := claims["sub"].(string)
-	if !ok {
-		response.WriteError(w, http.StatusUnauthorized, "invalid user id in token")
-		return
-	}
-
-	user, err := h.authService.GetProfile(r.Context(), publicID)
+	user, err := h.authService.GetProfile(r.Context(), authUser.PublicID)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
 			response.WriteError(w, http.StatusNotFound, "user not found")
