@@ -137,7 +137,7 @@ func (r *orderRepository) GetOrderByID(ctx context.Context, userID, orderID int)
 	return &order, nil
 }
 
-// Admin only
+// ! ADMIN ONLY PURPOSE
 func (r *orderRepository) GetOrderByIDForAdmin(ctx context.Context, orderID int) (*domain.Order, error) {
 	const query = `
 		SELECT id, user_id, order_number, total_amount, shipping_cost, tax, grand_total,

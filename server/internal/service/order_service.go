@@ -5,15 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
+	"furniture-api/internal/nullable"
+	"furniture-api/internal/repository"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
 type CartRepositoryForOrder interface {
-	GetCartItemsByUserID(ctx context.Context, userID int) ([]domain.CartItem, error)
-	ClearCart(ctx context.Context, cartID int) error
-	GetCartByUserID(ctx context.Context, userID int) (*domain.Cart, error)
+	GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error)
+	ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error
 }
 
 type ProductVariantRepositoryForOrder interface {
@@ -24,12 +25,14 @@ type ProductVariantRepositoryForOrder interface {
 type OrderRepository interface {
 	CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, order *domain.Order) error
 	CreateOrderItemWithTx(ctx context.Context, tx *sqlx.Tx, item *domain.OrderItem) error
-	CreateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status, notes, createdBy string) error
+	CreateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status string, notes nullable.NullString, createdBy string) error
+	UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status string, timestampColumn string) error
+
 	GetOrdersByUserID(ctx context.Context, userID int) ([]domain.Order, error)
 	GetOrderByID(ctx context.Context, orderID int) (*domain.Order, error)
+	GetOrderByIDForAdmin(ctx context.Context, orderID int) (*domain.Order, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
-	UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.Tx, orderID int, status string, timestampColumn string) error
 }
 
 type OrderService struct {
@@ -69,62 +72,62 @@ type UpdateOrderStatusReq struct {
 	Notes  string `json:"notes"`
 }
 
-func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
-	cartItems, err := s.cartRepo.GetCartItemsByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if len(cartItems) == 0 {
-		return nil, errors.New("Cart is empty")
-	}
+const taxRate = 0.12
+const maxOrderNumberAttempts = 3
 
+func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("begin checkout transaction")
 	}
 	defer tx.Rollback()
 
-	orderNumber := fmt.Sprintf("ORD-%s-%d", time.Now().Format("20060102"), time.Now().UnixNano()%10000)
+	cartItems, err := s.cartRepo.GetCartItemsByUserIDTx(ctx, tx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("gert cart items: %w", err)
+	}
+	if len(cartItems) == 0 {
+		return nil, ErrCartEmpty
+	}
+	cartID := cartItems[0].CartID
 
-	var totalAmount, grandTotal float64
-	var orderItems []domain.OrderItem
+	var totalAmount float64
+	orderItems := make([]domain.OrderItem, 0, len(cartItems))
 
 	for _, cartItem := range cartItems {
 		variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
-		if err != nil || variant == nil {
-			return nil, fmt.Errorf("Variant %d not found", cartItem.VariantID)
-		}
-
-		if variant.StockQuantity < cartItem.Quantity {
-			return nil, fmt.Errorf("Insufficient stock for variant %s (Available: %d, requested: %d)", variant.VariantName, variant.StockQuantity, cartItem.Quantity)
+		if err != nil {
+			if errors.Is(err, repository.ErrVariantNotFound) {
+				return nil, fmt.Errorf("%w: variant id %d", ErrVariantNotFound, cartItem.VariantID)
+			}
+			return nil, fmt.Errorf("get variant: %w", err)
 		}
 
 		pricePerItem := cartItem.PriceAtTime
-
 		totalItemPrice := float64(cartItem.Quantity) * pricePerItem
 		totalAmount += totalItemPrice
 
-		orderItem := domain.OrderItem{
+		orderItems = append(orderItems, domain.OrderItem{
 			VariantID:    cartItem.VariantID,
 			Quantity:     cartItem.Quantity,
 			PricePerItem: pricePerItem,
 			TotalPrice:   totalItemPrice,
-		}
-		orderItems = append(orderItems, orderItem)
+		})
 
-		err = s.variantRepo.DecreaseStockWithTx(ctx, tx, cartItem.VariantID, cartItem.Quantity)
-		if err != nil {
-			return nil, err
+		if err := s.variantRepo.DecreaseStockWithTx(ctx, tx, cartItem.VariantID, cartItem.Quantity); err != nil {
+			if errors.Is(err, repository.ErrInsufficientStock) {
+				return nil, fmt.Errorf("%w: variant %s", ErrInsufficientStock, variant.VariantName)
+			}
+			return nil, fmt.Errorf("decrease stock: %w", err)
 		}
 	}
 
 	shippingCost := 0.0
-	tax := totalAmount * 0.12
-	grandTotal = totalAmount + shippingCost + tax
+	tax := totalAmount * taxRate
+	grandTotal := totalAmount + shippingCost + tax
 
 	order := &domain.Order{
 		UserID:          userID,
-		OrderNumber:     orderNumber,
 		TotalAmount:     totalAmount,
 		ShippingCost:    shippingCost,
 		Tax:             tax,
@@ -132,49 +135,50 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRe
 		Status:          "pending",
 		ShippingAddress: req.ShippingAddress,
 		PaymentMethod:   "bank_transfer",
-		Notes:           req.Notes,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		Notes:           toNullString(req.Notes),
 	}
 
-	err = s.orderRepo.CreateOrderWithTx(ctx, tx, order)
-	if err != nil {
-		return nil, err
+	for attempt := 1; ; attempt++ {
+		order.OrderNumber = generateOrderNumber()
+		err = s.orderRepo.CreateOrderWithTx(ctx, tx, order)
+		if err != nil {
+			break
+		}
+		if errors.Is(err, repository.ErrDuplicateOrderNumber) && attempt < maxOrderNumberAttempts {
+			continue
+		}
+		return nil, fmt.Errorf("create order: %w", err)
 	}
 
 	for i := range orderItems {
 		orderItems[i].OrderID = order.ID
-		err = s.orderRepo.CreateOrderItemWithTx(ctx, tx, &orderItems[i])
-		if err != nil {
-			return nil, err
+		if err := s.orderRepo.CreateOrderItemWithTx(ctx, tx, &orderItems[i]); err != nil {
+			return nil, fmt.Errorf("create order item: %w", err)
 		}
 	}
 
-	err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", "Order created", "System")
-	if err != nil {
-		return nil, err
+	if err := s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", toNullString("order created"), "system"); err != nil {
+		return nil, fmt.Errorf("create order status: %w", err)
 	}
 
-	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if cart != nil {
-		err = s.cartRepo.ClearCart(ctx, cart.ID)
-		if err != nil {
-			return nil, err
-		}
+	if err := s.cartRepo.ClearCartWithTx(ctx, tx, cartID); err != nil {
+		return nil, fmt.Errorf("clear cart: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("commit checkout transaction: %w", err)
 	}
 
+	order.Items = orderItems
 	return &CheckoutResponse{
 		Order:      *order,
 		Items:      orderItems,
 		GrandTotal: grandTotal,
 	}, nil
+}
+
+func generateOrderNumber() string {
+	return fmt.Sprintf("ORD-%s-%d", time.Now().Format("20060102"), time.Now().UnixNano()%10000)
 }
 
 func (s *OrderService) GetUserOrders(ctx context.Context, userID int) ([]domain.Order, error) {
