@@ -19,7 +19,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	Create(ctx context.Context, user *domain.User) error
 	FindById(ctx context.Context, id int) (*domain.User, error)
-	FindByPublicId(ctx context.Context, publicID string) (*domain.User, error)
+	FindByPublicID(ctx context.Context, publicID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 }
 
@@ -36,7 +36,7 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 }
 
 func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*UserResponse, error) {
-	user, err := s.userRepo.FindByPublicId(ctx, publicID)
+	user, err := s.userRepo.FindByPublicID(ctx, publicID)
 	if err != nil {
 		return nil, err
 	}

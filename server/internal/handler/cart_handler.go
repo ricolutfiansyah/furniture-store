@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type CartHandler struct {
@@ -75,10 +74,9 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CartHandler) UpdateQuantity(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	itemID, err := strconv.Atoi(idStr)
+	itemID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		response.WriteError(w, http.StatusBadRequest, "invalid item ID")
+		response.WriteError(w, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
@@ -109,25 +107,28 @@ func (h *CartHandler) UpdateQuantity(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	itemID, err := strconv.Atoi(idStr)
+	itemID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid item id")
 		return
 	}
 
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
-
-	err = h.cartService.RemoveItem(r.Context(), userID, itemID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Item removed from cart",
-	})
+	if err = h.cartService.RemoveItem(r.Context(), authUser.ID, itemID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrCartItemNotFound):
+			response.WriteError(w, http.StatusNotFound, "cart item not found")
+		default:
+			log.Printf("remove item: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
+		return
+	}
+
+	response.WriteSuccess(w, http.StatusOK, nil, "item removed from cart")
 }

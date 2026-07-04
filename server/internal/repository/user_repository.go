@@ -80,7 +80,7 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 	return &user, nil
 }
 
-func (r *userRepository) FindByPublicId(ctx context.Context, publicID string) (*domain.User, error) {
+func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*domain.User, error) {
 	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE public_id = ?`
 
 	var user domain.User

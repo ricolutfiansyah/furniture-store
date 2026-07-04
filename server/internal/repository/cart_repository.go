@@ -88,7 +88,7 @@ func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx sqlx.Tx,
 	return items, nil
 }
 
-func (r *cartRepository) AddItem(ctx context.Context, cartID, variantID, quantity int, PriceAtTime float64) (*domain.CartItem, error) {
+func (r *cartRepository) AddItem(ctx context.Context, cartID, variantID, quantity int, PriceAtTime float64) error {
 	const query = `
 		INSERT INTO cart_items (cart_id, variant_id, quantity, price_at_time) 
 		VALUES (?, ?, ?, ?)
@@ -97,10 +97,10 @@ func (r *cartRepository) AddItem(ctx context.Context, cartID, variantID, quantit
 	`
 	_, err := r.db.ExecContext(ctx, query, cartID, variantID, quantity, PriceAtTime)
 	if err != nil {
-		return nil, fmt.Errorf("add item to cart: %w", err)
+		return fmt.Errorf("add item to cart: %w", err)
 	}
 
-	return r.findByCartAndVariant(ctx, cartID, variantID)
+	return nil
 }
 
 func (r *cartRepository) findByCartAndVariant(ctx context.Context, cartID, variantID int) (*domain.CartItem, error) {
