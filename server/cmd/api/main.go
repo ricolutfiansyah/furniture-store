@@ -46,7 +46,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
 	cartService := service.NewCartService(cartRepo, productRepo, productRepo)
-	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, db)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, userRepo, db)
 
 	// --- Handler ---
 	authHandler := handler.NewAuthHandler(authService)

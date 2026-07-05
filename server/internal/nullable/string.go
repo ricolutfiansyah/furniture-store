@@ -11,6 +11,13 @@ type NullString struct {
 }
 
 func NewNullString(s string) NullString {
+	if s == "" {
+		return NullString{
+			NullString: sql.NullString{
+				Valid: false,
+			},
+		}
+	}
 	return NullString{
 		NullString: sql.NullString{
 			String: s,

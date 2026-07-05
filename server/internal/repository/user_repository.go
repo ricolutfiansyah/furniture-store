@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -47,6 +48,19 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 
 	user.ID = int(id)
 
+	var timestamps struct {
+		IsActive  bool      `db:"is_active"`
+		CreatedAt time.Time `db:"created_at"`
+		UpdatedAt time.Time `db:"updated_at"`
+	}
+	const selectQuery = `SELECT is_active, created_at, updated_at FROM users WHERE id = ?`
+	if err := r.db.GetContext(ctx, &timestamps, selectQuery, user.ID); err != nil {
+		return fmt.Errorf("fetch created user timestamps: %w", err)
+	}
+	user.IsActive = timestamps.IsActive
+	user.CreatedAt = timestamps.CreatedAt
+	user.UpdatedAt = timestamps.UpdatedAt
+
 	return nil
 }
 
@@ -66,7 +80,9 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 }
 
 func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, error) {
-	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE id = ?`
+	const query = `
+				SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at 
+				FROM users WHERE id = ?`
 
 	var user domain.User
 	err := r.db.GetContext(ctx, &user, query, id)
@@ -81,7 +97,9 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 }
 
 func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*domain.User, error) {
-	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE public_id = ?`
+	const query = `
+				SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at 
+				FROM users WHERE public_id = ?`
 
 	var user domain.User
 	err := r.db.GetContext(ctx, &user, query, publicID)

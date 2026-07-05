@@ -2,16 +2,7 @@ package service
 
 import (
 	"furniture-api/internal/domain"
-	"furniture-api/internal/nullable"
 )
-
-func toNullString(s string) nullable.NullString {
-	if s == "" {
-		return nullable.NewNull()
-	}
-
-	return nullable.NewNullString(s)
-}
 
 type CheckoutRequest struct {
 	ShippingAddress string `json:"shipping_address"`

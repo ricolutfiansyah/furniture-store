@@ -10,7 +10,7 @@ type User struct {
 	PublicID     string              `db:"public_id" json:"id"`
 	Email        string              `db:"email" json:"email"`
 	PasswordHash string              `db:"password_hash" json:"-"`
-	FullName     string              `db:"full_name" json:"full_name"`
+	FullName     nullable.NullString `db:"full_name" json:"full_name"`
 	Phone        nullable.NullString `db:"phone" json:"phone"`
 	Address      nullable.NullString `db:"address" json:"address"`
 	Role         string              `db:"role" json:"role"`

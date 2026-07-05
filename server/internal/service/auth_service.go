@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
-	"furniture-api/internal/nullable"
 	"furniture-api/internal/repository"
 	"strings"
 	"time"
@@ -47,6 +46,7 @@ func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*UserRes
 
 func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*domain.User, error) {
 	req.Password = strings.ToLower(strings.TrimSpace(req.Password))
+	req.FullName = strings.TrimSpace(req.FullName)
 
 	if len(req.Password) < 8 {
 		return nil, ErrPasswordTooShort
@@ -69,9 +69,9 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 		PublicID:     uuid.New().String(),
 		Email:        req.Email,
 		PasswordHash: string(hashed),
-		FullName:     req.FullName,
-		Phone:        nullable.NewNullString(req.Phone),
-		Address:      nullable.NewNullString(req.Address),
+		FullName:     toNullString(req.FullName),
+		Phone:        toNullString(req.Phone),
+		Address:      toNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
 	}

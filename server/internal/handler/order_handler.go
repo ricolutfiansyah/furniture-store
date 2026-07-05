@@ -46,6 +46,10 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 			response.WriteError(w, http.StatusNotFound, "one or more variants not found")
 		case errors.Is(err, service.ErrInsufficientStock):
 			response.WriteError(w, http.StatusConflict, "insufficient stock")
+		case errors.Is(err, service.ErrFullNameRequired):
+			response.WriteError(w, http.StatusUnprocessableEntity, "full name must be filled before checkout")
+		case errors.Is(err, service.ErrPhoneRequired):
+			response.WriteError(w, http.StatusUnprocessableEntity, "phone number must be filled before checkout")
 		default:
 			log.Printf("checkout: %v", err)
 			response.WriteError(w, http.StatusInternalServerError, "internal server error")

@@ -38,10 +38,15 @@ type ProductVariantRepositoryForOrder interface {
 	DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx, variantID, quantity int) error
 }
 
+type UserRepositoryForOrder interface {
+	FindById(ctx context.Context, id int) (*domain.User, error)
+}
+
 type OrderService struct {
 	orderRepo   OrderRepository
 	cartRepo    CartRepositoryForOrder
 	variantRepo ProductVariantRepositoryForOrder
+	userRepo    UserRepositoryForOrder
 	db          *sqlx.DB
 }
 
@@ -49,12 +54,14 @@ func NewOrderService(
 	orderRepo OrderRepository,
 	cartRepo CartRepositoryForOrder,
 	variantRepo ProductVariantRepositoryForOrder,
+	userRepo UserRepositoryForOrder,
 	db *sqlx.DB,
 ) *OrderService {
 	return &OrderService{
 		orderRepo:   orderRepo,
 		cartRepo:    cartRepo,
 		variantRepo: variantRepo,
+		userRepo:    userRepo,
 		db:          db,
 	}
 }
@@ -63,6 +70,17 @@ const taxRate = 0.12
 const maxOrderNumberAttempts = 3
 
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
+	user, err := s.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("find user for checkout: %w", err)
+	}
+	if !user.FullName.Valid || user.FullName.String == "" {
+		return nil, ErrFullNameRequired
+	}
+	if !user.Phone.Valid || user.Phone.String == "" {
+		return nil, ErrPhoneRequired
+	}
+
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin checkout transaction: %w", err)
