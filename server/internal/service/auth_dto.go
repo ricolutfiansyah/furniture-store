@@ -26,7 +26,7 @@ type LoginResponse struct {
 type UserResponse struct {
 	ID       string              `json:"id"`
 	Email    string              `json:"email"`
-	FullName string              `json:"full_name"`
+	FullName nullable.NullString `json:"full_name"`
 	Phone    nullable.NullString `json:"phone"`
 	Address  nullable.NullString `json:"address"`
 	Role     string              `json:"role"`
