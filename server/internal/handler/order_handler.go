@@ -2,12 +2,15 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"furniture-api/internal/middleware"
+	"furniture-api/internal/response"
 	"furniture-api/internal/service"
+	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/go-chi/chi/v5"
 )
 
 type OrderHandler struct {
@@ -19,103 +22,119 @@ func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 }
 
 func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unautorized")
+	}
 
 	var req service.CheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-
 	if req.ShippingAddress == "" {
-		http.Error(w, "Shipping address is required", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "shipping address is required")
 		return
 	}
 
-	resp, err := h.orderService.Checkout(r.Context(), userID, &req)
+	resp, err := h.orderService.Checkout(r.Context(), authUser.ID, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		switch {
+		case errors.Is(err, service.ErrCartEmpty):
+			response.WriteError(w, http.StatusBadRequest, "cart is emtpy")
+		case errors.Is(err, service.ErrVariantNotFound):
+			response.WriteError(w, http.StatusNotFound, "one or more variants not found")
+		case errors.Is(err, service.ErrInsufficientStock):
+			response.WriteError(w, http.StatusConflict, "insufficient stock")
+		default:
+			log.Printf("checkout: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"data":    resp,
-		"message": "Order created successfully",
-	})
+	response.WriteSuccess(w, http.StatusCreated, resp, "order created successfully")
 }
 
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unautorized")
+	}
 
-	orders, err := h.orderService.GetUserOrders(r.Context(), userID)
+	orders, err := h.orderService.GetUserOrders(r.Context(), authUser.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("get orders: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    orders,
-		"message": "Orders retrieved successfully",
-	})
+	response.WriteSuccess(w, http.StatusOK, orders, "orders retrieved successfully")
 }
 
 func (h *OrderHandler) GetOrderDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	orderID, err := strconv.Atoi(idStr)
+	orderID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	claims := r.Context().Value(middleware.UserContextKey).(jwt.MapClaims)
-	userID := int(claims["sub"].(float64))
-
-	order, err := h.orderService.GetOrderDetail(r.Context(), userID, orderID)
+	order, err := h.orderService.GetOrderDetail(r.Context(), authUser.ID, orderID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			response.WriteError(w, http.StatusNotFound, "order not found")
+		default:
+			log.Printf("get order detail: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"data":    order,
-		"message": "Order detail retrieved successfully",
-	})
+	response.WriteSuccess(w, http.StatusOK, order, "order detail retrieved successfully")
 }
 
 func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	orderID, err := strconv.Atoi(idStr)
+	orderID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if authUser.Role != "admin" {
+		response.WriteError(w, http.StatusForbidden, "admin access required")
 		return
 	}
 
 	var req service.UpdateOrderStatusReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	adminName := "admin"
-
-	err = h.orderService.UpdateOrderStatus(r.Context(), orderID, req, adminName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err = h.orderService.UpdateOrderStatus(r.Context(), orderID, req); err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			response.WriteError(w, http.StatusNotFound, "order not found")
+		case errors.Is(err, service.ErrInvalidOrderStatus):
+			response.WriteError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrInvalidStatusTransition):
+			response.WriteError(w, http.StatusConflict, err.Error())
+		default:
+			log.Printf("update order status: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"success": true,
-		"message": "Order status updated successfully",
-	})
+	response.WriteSuccess(w, http.StatusOK, nil, "order status updated successfully")
 }

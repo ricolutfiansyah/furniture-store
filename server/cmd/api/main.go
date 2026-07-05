@@ -40,16 +40,19 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	cartRepo := repository.NewCartRepository(db)
+	orderRepo := repository.NewOrderRepository(db)
 
 	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
 	cartService := service.NewCartService(cartRepo, productRepo, productRepo)
+	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, db)
 
 	// --- Handler ---
 	authHandler := handler.NewAuthHandler(authService)
 	productHandler := handler.NewProductHandler(productService)
 	cartHandler := handler.NewCartHandler(cartService)
+	orderHandler := handler.NewOrderHandler(orderService)
 
 	r := chi.NewRouter()
 
@@ -93,6 +96,17 @@ func main() {
 			r.Post("/cart", cartHandler.AddToCart)
 			r.Put("/cart/items/{id}", cartHandler.UpdateQuantity)
 			r.Delete("/cart/items/{id}", cartHandler.RemoveItem)
+
+			r.Post("/orders/checkout", orderHandler.Checkout)
+			r.Get("/orders", orderHandler.GetOrders)
+			r.Get("/orders/{id}", orderHandler.GetOrderDetail)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(authMiddleware)
+			r.Use(middleware.AdminMiddleware)
+
+			r.Patch("orders/{id}/status", orderHandler.UpdateStatus)
 		})
 	})
 

@@ -73,7 +73,7 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 	return cart, nil
 }
 
-func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx sqlx.Tx, userID int) ([]domain.CartItem, error) {
+func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error) {
 	const query = `
 				SELECT ci.id, ci.cart_id, ci/variant_id, ci.quantity, ci.price_at_time, ci.created_at 
 				FROM cart_items ci 
@@ -163,7 +163,7 @@ func (r *cartRepository) RemoveItem(ctx context.Context, userID, cartItemID int)
 	return nil
 }
 
-func (r *cartRepository) ClearCartWithTx(ctx context.Context, tx sqlx.Tx, cartID int) error {
+func (r *cartRepository) ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error {
 	query := `DELETE FROM cart_items WHERE cart_id = ?`
 
 	if _, err := r.db.ExecContext(ctx, query, cartID); err != nil {
