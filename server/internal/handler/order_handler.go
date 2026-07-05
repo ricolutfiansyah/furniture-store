@@ -105,15 +105,6 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusBadRequest, "invalid order id")
 		return
 	}
-	authUser, ok := middleware.GetUserFromContext(r.Context())
-	if !ok {
-		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	if authUser.Role != "admin" {
-		response.WriteError(w, http.StatusForbidden, "admin access required")
-		return
-	}
 
 	var req service.UpdateOrderStatusReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -140,16 +131,6 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) GetOrderDetailForAdmin(w http.ResponseWriter, r *http.Request) {
-	authUser, ok := middleware.GetUserFromContext(r.Context())
-	if !ok {
-		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	if authUser.Role != "admin" {
-		response.WriteError(w, http.StatusForbidden, "admin access required")
-		return
-	}
-
 	orderID, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid order id")
