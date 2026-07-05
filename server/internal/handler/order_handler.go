@@ -138,3 +138,34 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 
 	response.WriteSuccess(w, http.StatusOK, nil, "order status updated successfully")
 }
+
+func (h *OrderHandler) GetOrderDetailForAdmin(w http.ResponseWriter, r *http.Request) {
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if authUser.Role != "admin" {
+		response.WriteError(w, http.StatusForbidden, "admin access required")
+		return
+	}
+
+	orderID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		response.WriteError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+
+	order, err := h.orderService.GetOrderDetailForAdmin(r.Context(), orderID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFound):
+			response.WriteError(w, http.StatusNotFound, "order not found")
+		default:
+			log.Printf("get order detail for admin: %v", err)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
+		return
+	}
+	response.WriteSuccess(w, http.StatusOK, order, "order detail retrieved successfully")
+}

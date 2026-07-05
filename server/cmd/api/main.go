@@ -106,7 +106,8 @@ func main() {
 			r.Use(authMiddleware)
 			r.Use(middleware.AdminMiddleware)
 
-			r.Patch("orders/{id}/status", orderHandler.UpdateStatus)
+			r.Patch("/admin/orders/{id}/status", orderHandler.UpdateStatus)
+			r.Get("/admin/orders/{id}", orderHandler.GetOrderDetailForAdmin)
 		})
 	})
 

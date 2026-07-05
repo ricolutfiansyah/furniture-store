@@ -186,21 +186,37 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) 
 		return nil, fmt.Errorf("get order by id: %w", err)
 	}
 
-	items, err := s.orderRepo.GetOrderItemsByOrderID(ctx, orderID)
+	return s.enrichOrder(ctx, order), nil
+}
+
+func (s *OrderService) GetOrderDetailForAdmin(ctx context.Context, orderID int) (*domain.Order, error) {
+	order, err := s.orderRepo.GetOrderByIDForAdmin(ctx, orderID)
 	if err != nil {
-		log.Printf("get items for order %d: %v", orderID, err)
+		if errors.Is(err, repository.ErrOrderNotFound) {
+			return nil, ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("get order by id for admin: %w", err)
+	}
+
+	return s.enrichOrder(ctx, order), nil
+}
+
+func (s *OrderService) enrichOrder(ctx context.Context, order *domain.Order) *domain.Order {
+	items, err := s.orderRepo.GetOrderItemsByOrderID(ctx, order.ID)
+	if err != nil {
+		log.Printf("get items for order %d: %v", order.ID, err)
 	} else {
 		order.Items = items
 	}
 
-	statuses, err := s.orderRepo.GetOrderStatusesByOrderID(ctx, orderID)
+	statuses, err := s.orderRepo.GetOrderStatusesByOrderID(ctx, order.ID)
 	if err != nil {
-		log.Printf("get statuses for order %d: %v", orderID, err)
+		log.Printf("get statuses for order %d: %v", order.ID, err)
 	} else {
 		order.Statuses = statuses
 	}
 
-	return order, nil
+	return order
 }
 
 var orderStatusTransitions = map[string][]string{
