@@ -8,6 +8,7 @@ import (
 	"furniture-api/internal/nullable"
 	"furniture-api/internal/repository"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -218,13 +219,8 @@ var orderStatusTimestampColumn = map[string]string{
 	"delivered": "delivered_at",
 }
 
-func isValidStatusTransitions(from, to string) bool {
-	for _, allowed := range orderStatusTransitions[from] {
-		if allowed == to {
-			return true
-		}
-	}
-	return false
+func isValidStatusTransition(from, to string) bool {
+	return slices.Contains(orderStatusTransitions[from], to)
 }
 
 func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req UpdateOrderStatusReq) error {
@@ -246,7 +242,7 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req U
 		return fmt.Errorf("get current order status: %w", err)
 	}
 
-	if !isValidStatusTransitions(currentStatus, req.Status) {
+	if !isValidStatusTransition(currentStatus, req.Status) {
 		return fmt.Errorf("%w: %s -> %s", ErrInvalidStatusTransition, currentStatus, req.Status)
 	}
 
