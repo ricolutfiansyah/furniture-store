@@ -111,7 +111,7 @@ func (r *orderRepository) GetOrdersByUserID(ctx context.Context, userID int) ([]
 				FROM orders WHERE user_id = ?
 				ORDER BY created_at DESC`
 
-	var orders []domain.Order
+	orders := []domain.Order{}
 	if err := r.db.SelectContext(ctx, &orders, query, userID); err != nil {
 		return nil, fmt.Errorf("get order by user id: %w", err)
 	}
@@ -161,7 +161,7 @@ func (r *orderRepository) GetOrderItemsByOrderID(ctx context.Context, orderID in
 				SELECT id, order_id, variant_id, quantity, price_per_item, total_price, created_at 
 				FROM order_items WHERE order_id = ?`
 
-	var items []domain.OrderItem
+	items := []domain.OrderItem{}
 	if err := r.db.SelectContext(ctx, &items, query, orderID); err != nil {
 		return nil, fmt.Errorf("get order items by order id: %w", err)
 	}
@@ -174,7 +174,7 @@ func (r *orderRepository) GetOrderStatusesByOrderID(ctx context.Context, orderID
 				SELECT id, order_id, status, notes, created_by, created_at 
 				FROM order_statuses WHERE order_id = ? ORDER BY created_at ASC`
 
-	var statuses []domain.OrderStatus
+	statuses := []domain.OrderStatus{}
 	if err := r.db.SelectContext(ctx, &statuses, query, orderID); err != nil {
 		return nil, fmt.Errorf("get order statuses by order id: %w", err)
 	}

@@ -59,7 +59,7 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 		return nil, fmt.Errorf("get or create cart: %w", err)
 	}
 
-	var items []domain.CartItem
+	items := []domain.CartItem{}
 	const itemsQuery = `
 					SELECT id, cart_id, variant_id, quantity, price_at_time, created_at, updated_at 
 					FROM cart_items 
@@ -80,7 +80,7 @@ func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx
 				JOIN carts c ON ci.cart_id = c.id 
 				WHERE c.user_id = ?`
 
-	var items []domain.CartItem
+	items := []domain.CartItem{}
 	if err := tx.SelectContext(ctx, &items, query, userID); err != nil {
 		return nil, fmt.Errorf("get cart items by user id: %w", err)
 	}

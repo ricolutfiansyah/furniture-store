@@ -24,7 +24,7 @@ func Load() *Config {
 	cfg := &Config{
 		Port:           getEnv("PORT", "8080"),
 		DBUrl:          getEnv("DB_URL", ""),
-		JWTSecret:      getEnv("JWTSecret", ""),
+		JWTSecret:      getEnv("JWT_SECRET", ""),
 		Env:            getEnv("ENV", "development"),
 		AllowedOrigins: getEnvAsSlice("ALLOWED_ORIGINS", []string{"http://localhost:5173"}),
 	}

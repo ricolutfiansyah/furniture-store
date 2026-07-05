@@ -27,7 +27,7 @@ func (r *productRepository) GetActive(ctx context.Context, limit, offset int) ([
 		ORDER BY created_at DESC 
 		LIMIT ? OFFSET ?`
 
-	var products []domain.Product
+	products := []domain.Product{}
 	err := r.db.SelectContext(ctx, &products, query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get active products: %w", err)
@@ -93,7 +93,7 @@ func (r *productRepository) GetVariantsByProductID(ctx context.Context, productI
 				FROM product_variants 
 				WHERE product_id = ? AND is_active = TRUE`
 
-	var variants []domain.ProductVariant
+	variants := []domain.ProductVariant{}
 	err := r.db.SelectContext(ctx, &variants, query, productID)
 	if err != nil {
 		return nil, fmt.Errorf("get variants by product id: %w", err)
@@ -109,7 +109,7 @@ func (r *productRepository) GetImagesByProductID(ctx context.Context, productID 
 				WHERE product_id = ? 
 				ORDER_BY is_active DESC, sort_order ASC`
 
-	var images []domain.ProductImage
+	images := []domain.ProductImage{}
 	err := r.db.SelectContext(ctx, &images, query, productID)
 	if err != nil {
 		return nil, fmt.Errorf("get images by product id: %w", err)
