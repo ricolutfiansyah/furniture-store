@@ -8,6 +8,7 @@ import (
 	"furniture-api/internal/repository"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
+	"furniture-api/internal/validation"
 	"log"
 	"net/http"
 )
@@ -49,11 +50,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authService.Register(r.Context(), &req)
 	if err != nil {
+		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); ok {
+			response.WriteValidationErrors(w, http.StatusBadRequest, valErrs)
+			return
+		}
+
 		switch {
 		case errors.Is(err, service.ErrEmailAlreadyRegistered):
 			response.WriteError(w, http.StatusConflict, "email already registered")
-		case errors.Is(err, service.ErrPasswordTooShort):
-			response.WriteError(w, http.StatusBadRequest, "password must be at least 8 characters")
 		default:
 			log.Printf("register error: %v", err)
 			response.WriteError(w, http.StatusInternalServerError, "internal server error")

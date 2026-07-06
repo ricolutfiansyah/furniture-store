@@ -14,7 +14,7 @@ type ValidationError struct {
 }
 
 func (v *ValidationError) Error() string {
-	return fmt.Sprintf("validation error on field '%s': %s", v.Field, v.Message)
+	return fmt.Sprintf("validation error on field `%s`: %s", v.Field, v.Message)
 }
 
 type ValidationErrors []*ValidationError
@@ -24,10 +24,11 @@ func (v ValidationErrors) Error() string {
 	for i, e := range v {
 		msgs[i] = e.Error()
 	}
+
 	return strings.Join(msgs, "; ")
 }
 
-// ===== VALIDATORS =====
+// * ===== VALIDATORS =====
 
 func Required(field, value string) error {
 	if strings.TrimSpace(value) == "" {
@@ -50,6 +51,9 @@ func IsValidEmail(field, value string) error {
 }
 
 func MinLength(field, value string, min int) error {
+	if value == "" {
+		return nil
+	}
 	if len(value) < min {
 		return &ValidationError{
 			Field:   field,
@@ -59,7 +63,7 @@ func MinLength(field, value string, min int) error {
 	return nil
 }
 
-// ===== COMBINE =====
+// * ===== COMBINE =====
 
 func Validate(validations ...error) error {
 	var errs ValidationErrors
@@ -78,7 +82,7 @@ func Validate(validations ...error) error {
 		return nil
 	}
 
-	return nil
+	return errs
 }
 
 func AsValidationError(err error, target **ValidationError) bool {

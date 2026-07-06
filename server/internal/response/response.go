@@ -23,6 +23,12 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 }
 
+type ValidationErrorResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Errors  any    `json:"errors"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -50,5 +56,13 @@ func WriteError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, ErrorResponse{
 		Success: false,
 		Error:   message,
+	})
+}
+
+func WriteValidationErrors(w http.ResponseWriter, status int, errors any) {
+	writeJSON(w, status, ValidationErrorResponse{
+		Success: false,
+		Message: "validation failed",
+		Errors:  errors,
 	})
 }
