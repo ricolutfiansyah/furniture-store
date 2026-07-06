@@ -6,7 +6,7 @@ import (
 )
 
 type UserAddress struct {
-	ID            string              `db:"id" json:"id"`
+	ID            int                 `db:"id" json:"id"`
 	UserID        int                 `db:"user_id" json:"user_id"`
 	Label         nullable.NullString `db:"label" json:"label"`
 	RecipientName string              `db:"recipient_name" json:"recipient_name"`

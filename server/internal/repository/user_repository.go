@@ -20,17 +20,11 @@ func NewUserRepository(db *sqlx.DB) *userRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
-	query := `INSERT INTO users (public_id, email, password_hash, full_name, phone, address, role) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	const query = `
+				INSERT INTO users (public_id, email, password_hash, full_name, phone, address, role) 
+				VALUES (:public_id, :email, :password_hash, :full_name, :phone, :address, :role)`
 
-	result, err := r.db.ExecContext(ctx, query,
-		user.PublicID,
-		user.Email,
-		user.PasswordHash,
-		user.FullName,
-		user.Phone,
-		user.Address,
-		user.Role,
-	)
+	result, err := r.db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		if isDuplicateKeyError(err, "email") {
 			return ErrEmailAlreadyRegistered
@@ -114,14 +108,9 @@ func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*
 }
 
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
-	const query = `UPDATE users SET full_name = ?, phone = ?, address = ?, updated_at = NOW() WHERE id = ?`
+	const query = `UPDATE users SET full_name = :full_name, phone = :phone, address = :address, updated_at = NOW() WHERE id = :id`
 
-	result, err := r.db.ExecContext(ctx, query,
-		user.FullName,
-		user.Phone,
-		user.Address,
-		user.ID,
-	)
+	result, err := r.db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}

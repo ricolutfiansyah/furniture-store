@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"furniture-api/internal/domain"
@@ -13,12 +14,18 @@ import (
 	"net/http"
 )
 
-type AuthHandler struct {
-	authService *service.AuthService
+type AuthService interface {
+	GetProfile(ctx context.Context, publicID string) (*domain.UserResponse, error)
+	Register(ctx context.Context, req *domain.RegisterRequest) (*domain.User, error)
+	Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error)
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+type AuthHandler struct {
+	authService AuthService
+}
+
+func NewAuthHandler(s AuthService) *AuthHandler {
+	return &AuthHandler{authService: s}
 }
 
 func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
