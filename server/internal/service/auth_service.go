@@ -103,20 +103,13 @@ const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMy.MrqR9U2v.9Q1M4x9jXjxTV0YQ4LgLW"
 func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
-	if req.Email == "" {
-		return nil, fmt.Errorf("%w: email is required", ErrEmailRequired)
-	}
-
-	if !emailRegex.MatchString(req.Email) {
-		return nil, fmt.Errorf("%w: invalid email format", ErrInvalidEmail)
-	}
-
-	if req.Password == "" {
-		return nil, fmt.Errorf("%w: password is required", ErrPasswordRequired)
-	}
-
-	if len(req.Password) < 8 {
-		return nil, ErrPasswordTooShort
+	if err := validation.Validate(
+		validation.Required("email", req.Email),
+		validation.IsValidEmail("email", req.Email),
+		validation.Required("password", req.Password),
+		validation.MinLength("password", req.Password, 8),
+	); err != nil {
+		return nil, err
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
