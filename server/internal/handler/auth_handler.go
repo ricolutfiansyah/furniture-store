@@ -77,6 +77,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Login(r.Context(), &req)
 	if err != nil {
+		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); ok {
+			response.WriteValidationErrors(w, http.StatusBadRequest, valErrs)
+			return
+		}
+
 		switch {
 		case errors.Is(err, service.ErrInvalidCredentials):
 			response.WriteError(w, http.StatusUnauthorized, "invalid credentials")

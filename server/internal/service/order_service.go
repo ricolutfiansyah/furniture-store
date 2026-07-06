@@ -7,6 +7,7 @@ import (
 	"furniture-api/internal/domain"
 	"furniture-api/internal/nullable"
 	"furniture-api/internal/repository"
+	"furniture-api/internal/validation"
 	"log"
 	"slices"
 	"time"
@@ -70,8 +71,10 @@ const taxRate = 0.12
 const maxOrderNumberAttempts = 3
 
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.CheckoutRequest) (*domain.CheckoutResponse, error) {
-	if req.ShippingAddress == "" {
-		return nil, ErrShippingAddressEmpty
+	if err := validation.Validate(
+		validation.Required("shipping address", req.ShippingAddress),
+	); err != nil {
+		return nil, err
 	}
 
 	if req.Notes == "" {

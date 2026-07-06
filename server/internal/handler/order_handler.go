@@ -7,6 +7,7 @@ import (
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
+	"furniture-api/internal/validation"
 	"log"
 	"net/http"
 	"strconv"
@@ -40,6 +41,10 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.orderService.Checkout(r.Context(), authUser.ID, &req)
 	if err != nil {
+		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); ok {
+			response.WriteValidationErrors(w, http.StatusBadRequest, valErrs)
+		}
+
 		switch {
 		case errors.Is(err, service.ErrCartEmpty):
 			response.WriteError(w, http.StatusBadRequest, "cart is emtpy")
