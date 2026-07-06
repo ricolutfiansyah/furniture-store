@@ -58,3 +58,10 @@ type ProductImage struct {
 	SortOrder int       `db:"sort_order" json:"sort_order"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
+
+type ProductListResult struct {
+	Products []Product
+	Total    int
+	Page     int
+	PageSize int
+}

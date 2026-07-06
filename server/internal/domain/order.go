@@ -49,3 +49,19 @@ type OrderStatus struct {
 	CreatedBy string              `db:"created_by" json:"created_by"`
 	CreatedAt time.Time           `db:"created_at" json:"created_at"`
 }
+
+type CheckoutRequest struct {
+	ShippingAddress string `json:"shipping_address"`
+	Notes           string `json:"notes"`
+}
+
+type CheckoutResponse struct {
+	Order      Order       `json:"order"`
+	Items      []OrderItem `json:"items"`
+	GrandTotal float64     `json:"grand_total"`
+}
+
+type UpdateOrderStatusReq struct {
+	Status string `json:"status"`
+	Notes  string `json:"notes"`
+}

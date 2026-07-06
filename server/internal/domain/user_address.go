@@ -20,3 +20,25 @@ type UserAddress struct {
 	CreatedAt     time.Time           `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time           `db:"updated_at" json:"updated_at"`
 }
+
+type CreateAddressRequest struct {
+	Label         *string `json:"label"`
+	RecipientName string  `json:"recipient_name" validate:"required"`
+	Phone         string  `json:"phone" validate:"required"`
+	Province      string  `json:"province" validate:"required"`
+	City          string  `json:"city" validate:"required"`
+	District      string  `json:"district" validate:"required"`
+	PostalCode    string  `json:"postal_code" validate:"required"`
+	AddressLine   string  `json:"address_line" validate:"required"`
+}
+
+type UpdateAddressRequest struct {
+	Label         *string `json:"label"`
+	RecipientName string  `json:"recipient_name" validate:"required"`
+	Phone         string  `json:"phone" validate:"required"`
+	Province      string  `json:"province" validate:"required"`
+	City          string  `json:"city" validate:"required"`
+	District      string  `json:"district" validate:"required"`
+	PostalCode    string  `json:"postal_code" validate:"required"`
+	AddressLine   string  `json:"address_line" validate:"required"`
+}

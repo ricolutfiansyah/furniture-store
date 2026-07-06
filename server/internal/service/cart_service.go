@@ -34,7 +34,7 @@ func NewCartService(cartRepo CartRepository, variantRepo ProductVariantRepositor
 	return &CartService{cartRepo: cartRepo, variantRepo: variantRepo, productRepo: productRepo}
 }
 
-func (s *CartService) AddToCart(ctx context.Context, userID int, req *AddToCartRequest) error {
+func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.AddToCartRequest) error {
 	if req.Quantity <= 0 {
 		return ErrInvalidQuantity
 	}

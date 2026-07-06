@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"furniture-api/internal/domain"
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
@@ -27,7 +28,7 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusUnauthorized, "unautorized")
 	}
 
-	var req service.CheckoutRequest
+	var req domain.CheckoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -110,7 +111,7 @@ func (h *OrderHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req service.UpdateOrderStatusReq
+	var req domain.UpdateOrderStatusReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return

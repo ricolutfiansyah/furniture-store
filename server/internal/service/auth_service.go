@@ -34,17 +34,17 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
-func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*UserResponse, error) {
+func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*domain.UserResponse, error) {
 	user, err := s.userRepo.FindByPublicID(ctx, publicID)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := toUserResponse(user)
+	resp := domain.ToUserResponse(user)
 	return &resp, nil
 }
 
-func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*domain.User, error) {
+func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.User, error) {
 	req.Password = strings.ToLower(strings.TrimSpace(req.Password))
 	req.FullName = strings.TrimSpace(req.FullName)
 
@@ -89,7 +89,7 @@ func (s *AuthService) Register(ctx context.Context, req *RegisterRequest) (*doma
 // consistency response time
 const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMy.MrqR9U2v.9Q1M4x9jXjxTV0YQ4LgLW"
 
-func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
@@ -122,8 +122,8 @@ func (s *AuthService) Login(ctx context.Context, req *LoginRequest) (*LoginRespo
 		return nil, fmt.Errorf("sign token: %w", err)
 	}
 
-	return &LoginResponse{
+	return &domain.LoginResponse{
 		Token: tokenString,
-		User:  toUserResponse(user),
+		User:  domain.ToUserResponse(user),
 	}, nil
 }

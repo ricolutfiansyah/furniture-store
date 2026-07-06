@@ -18,3 +18,41 @@ type User struct {
 	CreatedAt    time.Time           `db:"created_at" json:"created_at"`
 	UpdatedAt    time.Time           `db:"updated_at" json:"updated_at"`
 }
+
+type RegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	FullName string `json:"full_name"`
+	Phone    string `json:"phone"`
+	Address  string `json:"address"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token string       `json:"token"`
+	User  UserResponse `json:"user"`
+}
+
+type UserResponse struct {
+	ID       string              `json:"id"`
+	Email    string              `json:"email"`
+	FullName nullable.NullString `json:"full_name"`
+	Phone    nullable.NullString `json:"phone"`
+	Address  nullable.NullString `json:"address"`
+	Role     string              `json:"role"`
+}
+
+func ToUserResponse(user *User) UserResponse {
+	return UserResponse{
+		ID:       user.PublicID,
+		Email:    user.Email,
+		FullName: user.FullName,
+		Phone:    user.Phone,
+		Address:  user.Address,
+		Role:     user.Role,
+	}
+}

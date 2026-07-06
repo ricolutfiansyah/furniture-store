@@ -69,7 +69,7 @@ func NewOrderService(
 const taxRate = 0.12
 const maxOrderNumberAttempts = 3
 
-func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRequest) (*CheckoutResponse, error) {
+func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.CheckoutRequest) (*domain.CheckoutResponse, error) {
 	user, err := s.userRepo.FindById(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("find user for checkout: %w", err)
@@ -175,7 +175,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *CheckoutRe
 	}
 
 	order.Items = orderItems
-	return &CheckoutResponse{
+	return &domain.CheckoutResponse{
 		Order:      *order,
 		Items:      orderItems,
 		GrandTotal: grandTotal,
@@ -257,7 +257,7 @@ func isValidStatusTransition(from, to string) bool {
 	return slices.Contains(orderStatusTransitions[from], to)
 }
 
-func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req UpdateOrderStatusReq) error {
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req domain.UpdateOrderStatusReq) error {
 	if _, ok := orderStatusTransitions[req.Status]; !ok {
 		return fmt.Errorf("%w: %q", ErrInvalidOrderStatus, req.Status)
 	}

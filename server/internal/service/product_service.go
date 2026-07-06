@@ -28,7 +28,7 @@ func NewProductService(productRepo ProductRepository) *ProductService {
 	return &ProductService{productRepo: productRepo}
 }
 
-func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) (*ProductListResult, error) {
+func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) (*domain.ProductListResult, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -48,7 +48,7 @@ func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) (*Produ
 		return nil, fmt.Errorf("count active products: %w", err)
 	}
 
-	return &ProductListResult{
+	return &domain.ProductListResult{
 		Products: products,
 		Total:    total,
 		Page:     page,
