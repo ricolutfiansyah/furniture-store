@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
+	"furniture-api/internal/nullable"
 	"furniture-api/internal/repository"
+	"furniture-api/internal/validation"
 	"strings"
 	"time"
+
+	"regexp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -34,6 +38,8 @@ func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	}
 }
 
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+
 func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*domain.UserResponse, error) {
 	user, err := s.userRepo.FindByPublicID(ctx, publicID)
 	if err != nil {
@@ -45,11 +51,16 @@ func (s *AuthService) GetProfile(ctx context.Context, publicID string) (*domain.
 }
 
 func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.User, error) {
-	req.Password = strings.ToLower(strings.TrimSpace(req.Password))
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.FullName = strings.TrimSpace(req.FullName)
 
-	if len(req.Password) < 8 {
-		return nil, ErrPasswordTooShort
+	if err := validation.Validate(
+		validation.Required("email", req.Email),
+		validation.IsValidEmail("email", req.Email),
+		validation.Required("password", req.Password),
+		validation.MinLength("password", req.Password, 8),
+	); err != nil {
+		return nil, err
 	}
 
 	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
@@ -69,9 +80,9 @@ func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest)
 		PublicID:     uuid.New().String(),
 		Email:        req.Email,
 		PasswordHash: string(hashed),
-		FullName:     toNullString(req.FullName),
-		Phone:        toNullString(req.Phone),
-		Address:      toNullString(req.Address),
+		FullName:     nullable.ToNullString(req.FullName),
+		Phone:        nullable.ToNullString(req.Phone),
+		Address:      nullable.ToNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
 	}
@@ -91,6 +102,22 @@ const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMy.MrqR9U2v.9Q1M4x9jXjxTV0YQ4LgLW"
 
 func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	if req.Email == "" {
+		return nil, fmt.Errorf("%w: email is required", ErrEmailRequired)
+	}
+
+	if !emailRegex.MatchString(req.Email) {
+		return nil, fmt.Errorf("%w: invalid email format", ErrInvalidEmail)
+	}
+
+	if req.Password == "" {
+		return nil, fmt.Errorf("%w: password is required", ErrPasswordRequired)
+	}
+
+	if len(req.Password) < 8 {
+		return nil, ErrPasswordTooShort
+	}
 
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {

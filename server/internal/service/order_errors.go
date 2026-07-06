@@ -9,4 +9,5 @@ var (
 	ErrInvalidStatusTransition = errors.New("invalid order status transition")
 	ErrFullNameRequired        = errors.New("full name must be filled before checkout")
 	ErrPhoneRequired           = errors.New("phone number must be filled before checkout")
+	ErrShippingAddressEmpty    = errors.New("Shipping address is required")
 )

@@ -34,6 +34,14 @@ func NewNull() NullString {
 	}
 }
 
+func ToNullString(s string) NullString {
+	if s == "" {
+		return NewNull()
+	}
+
+	return NewNullString(s)
+}
+
 func (ns NullString) MarshalJSON() ([]byte, error) {
 	if !ns.Valid {
 		return []byte("null"), nil

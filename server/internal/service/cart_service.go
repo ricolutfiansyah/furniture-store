@@ -39,6 +39,10 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.Add
 		return ErrInvalidQuantity
 	}
 
+	if req.VariantID <= 0 {
+		return fmt.Errorf("variant id is required: %w", ErrInvalidVariantID)
+	}
+
 	variant, err := s.variantRepo.GetVariantByID(ctx, req.VariantID)
 	if err != nil {
 		if errors.Is(err, repository.ErrVariantNotFound) {

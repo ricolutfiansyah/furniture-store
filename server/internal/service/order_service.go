@@ -70,6 +70,14 @@ const taxRate = 0.12
 const maxOrderNumberAttempts = 3
 
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.CheckoutRequest) (*domain.CheckoutResponse, error) {
+	if req.ShippingAddress == "" {
+		return nil, ErrShippingAddressEmpty
+	}
+
+	if req.Notes == "" {
+		req.Notes = "No notes"
+	}
+
 	user, err := s.userRepo.FindById(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("find user for checkout: %w", err)
@@ -89,7 +97,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 
 	cartItems, err := s.cartRepo.GetCartItemsByUserIDTx(ctx, tx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("gert cart items: %w", err)
+		return nil, fmt.Errorf("get cart items: %w", err)
 	}
 	if len(cartItems) == 0 {
 		return nil, ErrCartEmpty
@@ -140,7 +148,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		Status:          "pending",
 		ShippingAddress: req.ShippingAddress,
 		PaymentMethod:   "bank_transfer",
-		Notes:           toNullString(req.Notes),
+		Notes:           nullable.ToNullString(req.Notes),
 	}
 
 	for attempt := 1; ; attempt++ {
@@ -162,7 +170,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		}
 	}
 
-	if err := s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", toNullString("order created"), "system"); err != nil {
+	if err := s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", nullable.ToNullString("order created"), "system"); err != nil {
 		return nil, fmt.Errorf("create order status: %w", err)
 	}
 
@@ -286,7 +294,7 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req d
 		return fmt.Errorf("update order status: %w", err)
 	}
 
-	if err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, toNullString(req.Notes), "admin"); err != nil {
+	if err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, nullable.ToNullString(req.Notes), "admin"); err != nil {
 		return fmt.Errorf("create order status history: %w", err)
 	}
 
