@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"furniture-api/internal/domain"
@@ -15,11 +16,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type OrderHandler struct {
-	orderService *service.OrderService
+type OrderService interface {
+	Checkout(ctx context.Context, userID int, req *domain.CheckoutRequest) (*domain.CheckoutResponse, error)
+	GetUserOrders(ctx context.Context, userID int) ([]domain.Order, error)
+	GetOrderDetail(ctx context.Context, userID, orderID int) (*domain.Order, error)
+	GetOrderDetailForAdmin(ctx context.Context, orderID int) (*domain.Order, error)
+	UpdateOrderStatus(ctx context.Context, orderID int, req domain.UpdateOrderStatusReq) error
 }
 
-func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
+type OrderHandler struct {
+	orderService OrderService
+}
+
+func NewOrderHandler(orderService OrderService) *OrderHandler {
 	return &OrderHandler{orderService: orderService}
 }
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"furniture-api/internal/domain"
@@ -14,11 +15,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type CartHandler struct {
-	cartService *service.CartService
+type CartService interface {
+	AddToCart(ctx context.Context, userID int, req *domain.AddToCartRequest) error
+	GetCart(ctx context.Context, userID int) (*domain.Cart, error)
+	UpdateQuantity(ctx context.Context, userID, cartItemID, quantity int) error
+	RemoveItem(ctx context.Context, userID, cartItemID int) error
 }
 
-func NewCartHandler(cartService *service.CartService) *CartHandler {
+type CartHandler struct {
+	cartService CartService
+}
+
+func NewCartHandler(cartService CartService) *CartHandler {
 	return &CartHandler{cartService: cartService}
 }
 

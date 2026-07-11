@@ -15,6 +15,7 @@ type AddressRepository interface {
 	Create(ctx context.Context, address *domain.UserAddress) error
 	CountByUserID(ctx context.Context, userID int) (int, error)
 	GetByID(ctx context.Context, id, userID int) (*domain.UserAddress, error)
+	ListByUserID(ctx context.Context, userID int) ([]domain.UserAddress, error)
 	ListByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.UserAddress, error)
 	Update(ctx context.Context, address *domain.UserAddress) error
 
@@ -165,6 +166,45 @@ func (s *addressService) DeleteAddress(ctx context.Context, id, userID int) erro
 		}
 	default:
 		// >1 remaining, no default auto-set
+	}
+
+	return tx.Commit()
+}
+
+func (s *addressService) ListAddresses(ctx context.Context, userID int) ([]domain.UserAddress, error) {
+	addresses, err := s.addressRepo.ListByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list addresses: %w", err)
+	}
+
+	return addresses, nil
+}
+
+func (s *addressService) SetDefaultAddress(ctx context.Context, id, userID int) error {
+	existing, err := s.addressRepo.GetByID(ctx, id, userID)
+	if err != nil {
+		return err
+	}
+	if existing.IsDefault {
+		return nil
+	}
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := s.addressRepo.GetByIDTx(ctx, tx, id, userID); err != nil {
+		return nil
+	}
+
+	if err := s.addressRepo.UnsetDefaultByUserID(ctx, tx, userID); err != nil {
+		return fmt.Errorf("unser current default: %w", err)
+	}
+
+	if err := s.addressRepo.SetDefault(ctx, tx, id, userID); err != nil {
+		return fmt.Errorf("set new default: %w", err)
 	}
 
 	return tx.Commit()

@@ -55,7 +55,6 @@ func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domai
 						postal_code, address_line, is_default, created_at, updated_at
 				FROM user_addresses
 				WHERE id = ? AND user_id = ?
-				FOR UPDATE
 			`
 
 	var address domain.UserAddress
@@ -89,6 +88,23 @@ func (r *addressRepository) GetByIDTx(ctx context.Context, tx *sqlx.Tx, id, user
 	}
 
 	return &address, nil
+}
+
+func (r *addressRepository) ListByUserID(ctx context.Context, userID int) ([]domain.UserAddress, error) {
+	const query = `
+				SELECT id, user_id, label, recipient_name, phone, province, city, district,
+						postal_code, address_line, is_default, created_at, updated_at
+				FROM user_addresses		
+				WHERE user_id = ?
+				ORDER BY is_default DESC, created_at DESC
+			`
+
+	addresses := []domain.UserAddress{}
+	if err := r.db.SelectContext(ctx, &addresses, query, userID); err != nil {
+		return nil, fmt.Errorf("list addresses (tx): %w", err)
+	}
+
+	return addresses, nil
 }
 
 func (r *addressRepository) ListByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.UserAddress, error) {

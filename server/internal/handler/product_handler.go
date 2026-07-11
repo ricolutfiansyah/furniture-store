@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"context"
 	"errors"
+	"furniture-api/internal/domain"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
 	"log"
@@ -11,11 +13,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type ProductHandler struct {
-	productService *service.ProductService
+type ProductService interface {
+	GetAll(ctx context.Context, page, pageSize int) (*domain.ProductListResult, error)
+	GetBySlug(ctx context.Context, slug string) (*domain.Product, error)
 }
 
-func NewProductHandler(productService *service.ProductService) *ProductHandler {
+type ProductHandler struct {
+	productService ProductService
+}
+
+func NewProductHandler(productService ProductService) *ProductHandler {
 	return &ProductHandler{productService: productService}
 }
 
