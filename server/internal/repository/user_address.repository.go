@@ -55,6 +55,7 @@ func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domai
 						postal_code, address_line, is_default, created_at, updated_at
 				FROM user_addresses
 				WHERE id = ? AND user_id = ?
+				FOR UPDATE
 			`
 
 	var address domain.UserAddress
@@ -69,18 +70,38 @@ func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domai
 	return &address, nil
 }
 
-func (r *addressRepository) ListByUserID(ctx context.Context, userID int) ([]domain.UserAddress, error) {
+func (r *addressRepository) GetByIDTx(ctx context.Context, tx *sqlx.Tx, id, userID int) (*domain.UserAddress, error) {
+	const query = `
+				SELECT id, user_id, label, recipient_name, phone, province, city, district,
+						postal_code, address_line, is_default, created_at, updated_at
+				FROM user_addresses
+				WHERE id = ? AND user_id = ?
+				FOR UPDATE
+			`
+
+	var address domain.UserAddress
+	err := tx.GetContext(ctx, &address, query, id, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrAddressNotFound
+		}
+		return nil, fmt.Errorf("get address by id (tx): %w", err)
+	}
+
+	return &address, nil
+}
+
+func (r *addressRepository) ListByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.UserAddress, error) {
 	const query = `
 				SELECT id, user_id, label, recipient_name, phone, province, city, district,
 						postal_code, address_line, is_default, created_at, updated_at
 				FROM user_addresses		
 				WHERE user_id = ?
-				ORDER BY is_default DESC, created_at DESC
 			`
 
 	addresses := []domain.UserAddress{}
-	if err := r.db.SelectContext(ctx, &addresses, query, userID); err != nil {
-		return nil, fmt.Errorf("list addresses: %w", err)
+	if err := tx.SelectContext(ctx, &addresses, query, userID); err != nil {
+		return nil, fmt.Errorf("list addresses (tx): %w", err)
 	}
 
 	return addresses, nil
@@ -111,17 +132,17 @@ func (r *addressRepository) Update(ctx context.Context, address *domain.UserAddr
 	return nil
 }
 
-func (r *addressRepository) Delete(ctx context.Context, id, userID int) error {
+func (r *addressRepository) DeleteTx(ctx context.Context, tx *sqlx.Tx, id, userID int) error {
 	const query = `DELETE FROM user_addresses WHERE id = ? AND user_id = ?`
 
-	result, err := r.db.ExecContext(ctx, query, id, userID)
+	result, err := tx.ExecContext(ctx, query, id, userID)
 	if err != nil {
 		return fmt.Errorf("delete address: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("get rows affected: %w", err)
+		return fmt.Errorf("get rows affected (tx): %w", err)
 	}
 	if rowsAffected == 0 {
 		return ErrAddressNotFound
@@ -155,20 +176,4 @@ func (r *addressRepository) SetDefault(ctx context.Context, tx *sqlx.Tx, id, use
 		return ErrAddressNotFound
 	}
 	return nil
-}
-
-func (r *addressRepository) ListRemainingAfterDelete(ctx context.Context, userID, excludeID int) ([]domain.UserAddress, error) {
-	const query = `
-				SELECT id, user_id, label, recipient_name, phone, province, city, district,
-					postal_code, address_line, is_default, created_at, updated_at
-				FROM user_addresses
-				WHERE user_id = ? AND id != ?
-			`
-
-	addresses := []domain.UserAddress{}
-	if err := r.db.SelectContext(ctx, &addresses, query, userID, excludeID); err != nil {
-		return nil, fmt.Errorf("list remaining addresses: %w", err)
-	}
-
-	return addresses, nil
 }
