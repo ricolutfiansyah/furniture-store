@@ -13,13 +13,13 @@ type NullString struct {
 func NewNullString(s string) NullString {
 	if s == "" {
 		return NullString{
-			NullString: sql.NullString{
+			sql.NullString{
 				Valid: false,
 			},
 		}
 	}
 	return NullString{
-		NullString: sql.NullString{
+		sql.NullString{
 			String: s,
 			Valid:  true,
 		},
@@ -28,18 +28,10 @@ func NewNullString(s string) NullString {
 
 func NewNull() NullString {
 	return NullString{
-		NullString: sql.NullString{
+		sql.NullString{
 			Valid: false,
 		},
 	}
-}
-
-func ToNullString(s string) NullString {
-	if s == "" {
-		return NewNull()
-	}
-
-	return NewNullString(s)
 }
 
 func (ns NullString) MarshalJSON() ([]byte, error) {

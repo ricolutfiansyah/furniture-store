@@ -151,7 +151,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		Status:          "pending",
 		ShippingAddress: req.ShippingAddress,
 		PaymentMethod:   "bank_transfer",
-		Notes:           nullable.ToNullString(req.Notes),
+		Notes:           nullable.NewNullString(req.Notes),
 	}
 
 	for attempt := 1; ; attempt++ {
@@ -173,7 +173,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		}
 	}
 
-	if err := s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", nullable.ToNullString("order created"), "system"); err != nil {
+	if err := s.orderRepo.CreateOrderStatusWithTx(ctx, tx, order.ID, "pending", nullable.NewNullString("order created"), "system"); err != nil {
 		return nil, fmt.Errorf("create order status: %w", err)
 	}
 
@@ -297,7 +297,7 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req d
 		return fmt.Errorf("update order status: %w", err)
 	}
 
-	if err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, nullable.ToNullString(req.Notes), "admin"); err != nil {
+	if err = s.orderRepo.CreateOrderStatusWithTx(ctx, tx, orderID, req.Status, nullable.NewNullString(req.Notes), "admin"); err != nil {
 		return fmt.Errorf("create order status history: %w", err)
 	}
 

@@ -139,3 +139,36 @@ func (r *addressRepository) UnsetDefaultByUserID(ctx context.Context, tx *sqlx.T
 
 	return nil
 }
+
+func (r *addressRepository) SetDefault(ctx context.Context, tx *sqlx.Tx, id, userID int) error {
+	query := `UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?`
+	result, err := tx.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("set default address: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("get rows affected: %w", err)
+	}
+	if rows == 0 {
+		return ErrAddressNotFound
+	}
+	return nil
+}
+
+func (r *addressRepository) ListRemainingAfterDelete(ctx context.Context, userID, excludeID int) ([]domain.UserAddress, error) {
+	const query = `
+				SELECT id, user_id, label, recipient_name, phone, province, city, district,
+					postal_code, address_line, is_default, created_at, updated_at
+				FROM user_addresses
+				WHERE user_id = ? AND id != ?
+			`
+
+	addresses := []domain.UserAddress{}
+	if err := r.db.SelectContext(ctx, &addresses, query, userID, excludeID); err != nil {
+		return nil, fmt.Errorf("list remaining addresses: %w", err)
+	}
+
+	return addresses, nil
+}

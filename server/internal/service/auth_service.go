@@ -80,9 +80,9 @@ func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest)
 		PublicID:     uuid.New().String(),
 		Email:        req.Email,
 		PasswordHash: string(hashed),
-		FullName:     nullable.ToNullString(req.FullName),
-		Phone:        nullable.ToNullString(req.Phone),
-		Address:      nullable.ToNullString(req.Address),
+		FullName:     nullable.NewNullString(req.FullName),
+		Phone:        nullable.NewNullString(req.Phone),
+		Address:      nullable.NewNullString(req.Address),
 		Role:         "user",
 		IsActive:     true,
 	}
