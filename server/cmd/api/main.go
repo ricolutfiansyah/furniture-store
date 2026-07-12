@@ -41,18 +41,21 @@ func main() {
 	productRepo := repository.NewProductRepository(db)
 	cartRepo := repository.NewCartRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
+	addressRepo := repository.NewAddressRepository(db)
 
 	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
 	cartService := service.NewCartService(cartRepo, productRepo, productRepo)
 	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, userRepo, db)
+	addressService := service.NewAddressService(addressRepo, db)
 
 	// --- Handler ---
 	authHandler := handler.NewAuthHandler(authService)
 	productHandler := handler.NewProductHandler(productService)
 	cartHandler := handler.NewCartHandler(cartService)
 	orderHandler := handler.NewOrderHandler(orderService)
+	addressHandler := handler.NewAddressHandler(addressService)
 
 	r := chi.NewRouter()
 
@@ -100,6 +103,12 @@ func main() {
 			r.Post("/orders/checkout", orderHandler.Checkout)
 			r.Get("/orders", orderHandler.GetOrders)
 			r.Get("/orders/{id}", orderHandler.GetOrderDetail)
+
+			r.Get("/addresses", addressHandler.ListAddresses)
+			r.Post("/addresses", addressHandler.CreateAddress)
+			r.Patch("/addresses/{id}", addressHandler.UpdateAddress)
+			r.Delete("/addresses/{id}", addressHandler.DeleteAddress)
+			r.Patch("/addresses/{id}", addressHandler.SetDefaultAddress)
 		})
 
 		r.Group(func(r chi.Router) {
