@@ -51,8 +51,8 @@ type OrderStatus struct {
 }
 
 type CheckoutRequest struct {
-	ShippingAddress string `json:"shipping_address"`
-	Notes           string `json:"notes"`
+	AddressID int    `json:"address_id"`
+	Notes     string `json:"notes"`
 }
 
 type CheckoutResponse struct {

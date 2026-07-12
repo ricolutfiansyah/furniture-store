@@ -63,6 +63,14 @@ func MinLength(field, value string, min int) error {
 	return nil
 }
 
+func ValidateAddressID(id int) error {
+	if id <= 0 {
+		return &ValidationError{Field: "address_id", Message: "is required"}
+	}
+
+	return nil
+}
+
 // * ===== COMBINE =====
 
 func Validate(validations ...error) error {

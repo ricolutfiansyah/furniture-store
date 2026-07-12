@@ -43,26 +43,33 @@ type UserRepositoryForOrder interface {
 	FindById(ctx context.Context, id int) (*domain.User, error)
 }
 
+type AddressRepositoryForOrder interface {
+	GetByID(ctx context.Context, id, userID int) (*domain.UserAddress, error)
+}
+
 type OrderService struct {
 	orderRepo   OrderRepository
 	cartRepo    CartRepositoryForOrder
 	variantRepo ProductVariantRepositoryForOrder
 	userRepo    UserRepositoryForOrder
+	addressRepo AddressRepositoryForOrder
 	db          *sqlx.DB
 }
 
 func NewOrderService(
-	orderRepo OrderRepository,
-	cartRepo CartRepositoryForOrder,
-	variantRepo ProductVariantRepositoryForOrder,
-	userRepo UserRepositoryForOrder,
+	or OrderRepository,
+	cr CartRepositoryForOrder,
+	vr ProductVariantRepositoryForOrder,
+	ur UserRepositoryForOrder,
+	ar AddressRepositoryForOrder,
 	db *sqlx.DB,
 ) *OrderService {
 	return &OrderService{
-		orderRepo:   orderRepo,
-		cartRepo:    cartRepo,
-		variantRepo: variantRepo,
-		userRepo:    userRepo,
+		orderRepo:   or,
+		cartRepo:    cr,
+		variantRepo: vr,
+		userRepo:    ur,
+		addressRepo: ar,
 		db:          db,
 	}
 }
@@ -72,7 +79,7 @@ const maxOrderNumberAttempts = 3
 
 func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.CheckoutRequest) (*domain.CheckoutResponse, error) {
 	if err := validation.Validate(
-		validation.Required("shipping address", req.ShippingAddress),
+		validation.ValidateAddressID(req.AddressID),
 	); err != nil {
 		return nil, err
 	}
@@ -91,6 +98,12 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 	if !user.Phone.Valid || user.Phone.String == "" {
 		return nil, ErrPhoneRequired
 	}
+
+	address, err := s.addressRepo.GetByID(ctx, req.AddressID, userID)
+	if err != nil {
+		return nil, err
+	}
+	shippingAddress := formatShippingAddress(address)
 
 	tx, err := s.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -149,7 +162,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		Tax:             tax,
 		GrandTotal:      grandTotal,
 		Status:          "pending",
-		ShippingAddress: req.ShippingAddress,
+		ShippingAddress: shippingAddress,
 		PaymentMethod:   "bank_transfer",
 		Notes:           nullable.NewNullString(req.Notes),
 	}

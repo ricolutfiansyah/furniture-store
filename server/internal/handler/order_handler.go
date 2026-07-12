@@ -6,6 +6,7 @@ import (
 	"errors"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/middleware"
+	"furniture-api/internal/repository"
 	"furniture-api/internal/response"
 	"furniture-api/internal/service"
 	"furniture-api/internal/validation"
@@ -36,6 +37,7 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	authUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
 		response.WriteError(w, http.StatusUnauthorized, "unautorized")
+		return
 	}
 
 	var req domain.CheckoutRequest
@@ -43,15 +45,12 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if req.ShippingAddress == "" {
-		response.WriteError(w, http.StatusBadRequest, "shipping address is required")
-		return
-	}
 
 	resp, err := h.orderService.Checkout(r.Context(), authUser.ID, &req)
 	if err != nil {
 		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); ok {
 			response.WriteValidationErrors(w, http.StatusBadRequest, valErrs)
+			return
 		}
 
 		switch {
@@ -65,6 +64,8 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 			response.WriteError(w, http.StatusUnprocessableEntity, "full name must be filled before checkout")
 		case errors.Is(err, service.ErrPhoneRequired):
 			response.WriteError(w, http.StatusUnprocessableEntity, "phone number must be filled before checkout")
+		case errors.Is(err, repository.ErrAddressNotFound):
+			response.WriteError(w, http.StatusNotFound, "address not found")
 		default:
 			log.Printf("checkout: %v", err)
 			response.WriteError(w, http.StatusInternalServerError, "internal server error")
