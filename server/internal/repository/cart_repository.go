@@ -166,8 +166,52 @@ func (r *cartRepository) RemoveItem(ctx context.Context, userID, cartItemID int)
 func (r *cartRepository) ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error {
 	query := `DELETE FROM cart_items WHERE cart_id = ?`
 
-	if _, err := r.db.ExecContext(ctx, query, cartID); err != nil {
+	if _, err := tx.ExecContext(ctx, query, cartID); err != nil {
 		return fmt.Errorf("clear cart: %w", err)
 	}
+	return nil
+}
+
+func (r *cartRepository) GetCartItemsByIDsTx(ctx context.Context, tx *sqlx.Tx, userID int, itemIDs []int) ([]domain.CartItem, error) {
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT ci.id, ci.cart_id, ci.variant_id, ci.quantity, ci.price_at_time, ci.created_at
+		FROM cart_items ci
+		JOIN carts c ON ci.cart_id = c.id 
+		WHERE c.user_id = ? AND ci.id IN (?)
+	`, userID, itemIDs)
+
+	if err != nil {
+		return nil, fmt.Errorf("build query: %w", err)
+	}
+
+	query = tx.Rebind(query)
+	items := []domain.CartItem{}
+	if err := tx.SelectContext(ctx, &items, query, args...); err != nil {
+		return nil, fmt.Errorf("get cart items by ids: %w", err)
+	}
+
+	return items, nil
+}
+
+func (r *cartRepository) RemoveCartItemsWithTx(ctx context.Context, tx *sqlx.Tx, cartID int, itemIDs []int) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	query, args, err := sqlx.In(`DELETE FROM cart_items WHERE cart_id = ? AND id IN (?)`, cartID, itemIDs)
+	if err != nil {
+		return fmt.Errorf("build query: %w", err)
+	}
+
+	query = tx.Rebind(query)
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("remove specific cart items: %w", err)
+	}
+
 	return nil
 }
