@@ -75,7 +75,7 @@ func (r *cartRepository) GetCartWithItems(ctx context.Context, userID int) (*dom
 
 func (r *cartRepository) GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error) {
 	const query = `
-				SELECT ci.id, ci.cart_id, ci/variant_id, ci.quantity, ci.price_at_time, ci.created_at 
+				SELECT ci.id, ci.cart_id, ci.variant_id, ci.quantity, ci.price_at_time, ci.created_at 
 				FROM cart_items ci 
 				JOIN carts c ON ci.cart_id = c.id 
 				WHERE c.user_id = ?`

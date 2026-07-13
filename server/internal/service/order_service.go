@@ -200,9 +200,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 
 	order.Items = orderItems
 	return &domain.CheckoutResponse{
-		Order:      *order,
-		Items:      orderItems,
-		GrandTotal: grandTotal,
+		Order: *order,
 	}, nil
 }
 

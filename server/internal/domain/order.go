@@ -56,9 +56,7 @@ type CheckoutRequest struct {
 }
 
 type CheckoutResponse struct {
-	Order      Order       `json:"order"`
-	Items      []OrderItem `json:"items"`
-	GrandTotal float64     `json:"grand_total"`
+	Order Order `json:"order"`
 }
 
 type UpdateOrderStatusReq struct {
