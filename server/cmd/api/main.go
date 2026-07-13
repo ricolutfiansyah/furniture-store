@@ -97,7 +97,7 @@ func main() {
 
 			r.Get("/cart", cartHandler.GetCart)
 			r.Post("/cart", cartHandler.AddToCart)
-			r.Put("/cart/items/{id}", cartHandler.UpdateQuantity)
+			r.Patch("/cart/items/{id}", cartHandler.UpdateQuantity)
 			r.Delete("/cart/items/{id}", cartHandler.RemoveItem)
 
 			r.Post("/orders/checkout", orderHandler.Checkout)
@@ -108,7 +108,7 @@ func main() {
 			r.Post("/addresses", addressHandler.CreateAddress)
 			r.Patch("/addresses/{id}", addressHandler.UpdateAddress)
 			r.Delete("/addresses/{id}", addressHandler.DeleteAddress)
-			r.Patch("/addresses/{id}", addressHandler.SetDefaultAddress)
+			r.Patch("/addresses/{id}/default", addressHandler.SetDefaultAddress)
 		})
 
 		r.Group(func(r chi.Router) {

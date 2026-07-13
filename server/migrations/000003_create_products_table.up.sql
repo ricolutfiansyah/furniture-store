@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `products` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_id` int(11) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `slug` varchar(200) NOT NULL,
+  `description` text DEFAULT NULL,
+  `base_price` decimal(12,2) NOT NULL,
+  `sku` varchar(50) DEFAULT NULL,
+  `weight_kg` decimal(8,2) NOT NULL DEFAULT 0.00,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `views` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  UNIQUE KEY `sku` (`sku`),
+  KEY `idx_category` (`category_id`),
+  KEY `idx_active` (`is_active`),
+  CONSTRAINT `fk_products_category_id` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
