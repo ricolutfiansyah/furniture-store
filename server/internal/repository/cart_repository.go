@@ -182,6 +182,7 @@ func (r *cartRepository) GetCartItemsByIDsTx(ctx context.Context, tx *sqlx.Tx, u
 		FROM cart_items ci
 		JOIN carts c ON ci.cart_id = c.id 
 		WHERE c.user_id = ? AND ci.id IN (?)
+		FOR UPDATE
 	`, userID, itemIDs)
 
 	if err != nil {

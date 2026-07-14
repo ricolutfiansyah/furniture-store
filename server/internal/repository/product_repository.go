@@ -51,8 +51,8 @@ func (r *productRepository) CountActive(ctx context.Context) (int, error) {
 func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
 	query := `
 			SELECT id, category_id, name, slug, description, base_price, sku, 
-			weight_kg, is_active, views, created_at, updated_at, 
-			FROM products 
+			weight_kg, is_active, views, created_at, updated_at 
+			FROM products
 			WHERE slug = ? AND is_active = TRUE`
 
 	var product domain.Product

@@ -31,6 +31,8 @@ type OrderRepository interface {
 
 type CartRepositoryForOrder interface {
 	GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error)
+	GetCartItemsByIDsTx(ctx context.Context, tx *sqlx.Tx, userID int, itemIDs []int) ([]domain.CartItem, error)
+	RemoveCartItemsWithTx(ctx context.Context, tx *sqlx.Tx, cartID int, itemIDs []int) error
 	ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error
 }
 
@@ -111,13 +113,22 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 	}
 	defer tx.Rollback()
 
-	cartItems, err := s.cartRepo.GetCartItemsByUserIDTx(ctx, tx, userID)
+	if len(req.CartItemIDs) == 0 {
+		return nil, errors.New("Please choose an item first")
+	}
+
+	cartItems, err := s.cartRepo.GetCartItemsByIDsTx(ctx, tx, userID, req.CartItemIDs)
 	if err != nil {
 		return nil, fmt.Errorf("get cart items: %w", err)
 	}
 	if len(cartItems) == 0 {
 		return nil, ErrCartEmpty
 	}
+
+	if len(cartItems) != len(req.CartItemIDs) {
+		return nil, errors.New("One of the item is invalid or no longer exist in the cart")
+	}
+
 	cartID := cartItems[0].CartID
 
 	var totalAmount float64
@@ -190,8 +201,8 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		return nil, fmt.Errorf("create order status: %w", err)
 	}
 
-	if err := s.cartRepo.ClearCartWithTx(ctx, tx, cartID); err != nil {
-		return nil, fmt.Errorf("clear cart: %w", err)
+	if err := s.cartRepo.RemoveCartItemsWithTx(ctx, tx, cartID, req.CartItemIDs); err != nil {
+		return nil, fmt.Errorf("remove checked out items from cart: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
