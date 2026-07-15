@@ -98,6 +98,7 @@ func main() {
 			r.Get("/cart", cartHandler.GetCart)
 			r.Post("/cart", cartHandler.AddToCart)
 			r.Patch("/cart/items/{id}", cartHandler.UpdateQuantity)
+			r.Delete("/cart/items/bulk", cartHandler.BulkRemoveItems)
 			r.Delete("/cart/items/{id}", cartHandler.RemoveItem)
 
 			r.Post("/orders/checkout", orderHandler.Checkout)

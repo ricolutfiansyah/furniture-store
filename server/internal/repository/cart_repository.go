@@ -163,15 +163,6 @@ func (r *cartRepository) RemoveItem(ctx context.Context, userID, cartItemID int)
 	return nil
 }
 
-func (r *cartRepository) ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error {
-	query := `DELETE FROM cart_items WHERE cart_id = ?`
-
-	if _, err := tx.ExecContext(ctx, query, cartID); err != nil {
-		return fmt.Errorf("clear cart: %w", err)
-	}
-	return nil
-}
-
 func (r *cartRepository) GetCartItemsByIDsTx(ctx context.Context, tx *sqlx.Tx, userID int, itemIDs []int) ([]domain.CartItem, error) {
 	if len(itemIDs) == 0 {
 		return nil, nil
@@ -212,6 +203,30 @@ func (r *cartRepository) RemoveCartItemsWithTx(ctx context.Context, tx *sqlx.Tx,
 
 	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("remove specific cart items: %w", err)
+	}
+
+	return nil
+}
+
+func (r *cartRepository) RemoveItems(ctx context.Context, userID int, itemIDs []int) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	query, args, err := sqlx.In(`
+		DELETE ci FROM cart_items ci 
+		JOIN carts c ON ci.cart_id = c.id
+		WHERE c.user_id = ? AND ci.id IN (?)
+	`, userID, itemIDs)
+
+	if err != nil {
+		return fmt.Errorf("build bulk delete query: %w", err)
+	}
+
+	query = r.db.Rebind(query)
+
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("bulk remove cart items: %w", err)
 	}
 
 	return nil

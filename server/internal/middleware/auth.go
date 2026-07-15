@@ -110,5 +110,6 @@ func AdminMiddleware(next http.Handler) http.Handler {
 
 func GetUserFromContext(ctx context.Context) (AuthenticatedUser, bool) {
 	user, ok := ctx.Value(UserContextKey).(AuthenticatedUser)
+
 	return user, ok
 }

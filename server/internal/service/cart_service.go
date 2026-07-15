@@ -14,6 +14,7 @@ type CartRepository interface {
 	AddItem(ctx context.Context, cartID, variantID, quantity int, priceAtTime float64) error
 	UpdateItemQuantity(ctx context.Context, userID, cartItemID, quantity int) error
 	RemoveItem(ctx context.Context, userID, cartItemID int) error
+	RemoveItems(ctx context.Context, userID int, itemIDs []int) error
 }
 
 type ProductVariantRepository interface {
@@ -113,6 +114,18 @@ func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) er
 			return ErrCartItemNotFound
 		}
 		return fmt.Errorf("remove item: %w", err)
+	}
+
+	return nil
+}
+
+func (s *CartService) BulkRemoveItems(ctx context.Context, userID int, itemIDs []int) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	if err := s.cartRepo.RemoveItems(ctx, userID, itemIDs); err != nil {
+		return fmt.Errorf("bulk remove items: %w", err)
 	}
 
 	return nil

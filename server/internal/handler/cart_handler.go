@@ -20,6 +20,7 @@ type CartService interface {
 	GetCart(ctx context.Context, userID int) (*domain.Cart, error)
 	UpdateQuantity(ctx context.Context, userID, cartItemID, quantity int) error
 	RemoveItem(ctx context.Context, userID, cartItemID int) error
+	BulkRemoveItems(ctx context.Context, userID int, itemIDs []int) error
 }
 
 type CartHandler struct {
@@ -140,4 +141,26 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteSuccess(w, http.StatusOK, nil, "item removed from cart")
+}
+
+func (h *CartHandler) BulkRemoveItems(w http.ResponseWriter, r *http.Request) {
+	authUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req domain.BulkRemoveCartItems
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.cartService.BulkRemoveItems(r.Context(), authUser.ID, req.CartItemIDs); err != nil {
+		log.Printf("bulk remove items: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	response.WriteSuccess(w, http.StatusOK, nil, "items removed from cart")
 }

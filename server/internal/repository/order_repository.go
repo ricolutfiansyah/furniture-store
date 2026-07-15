@@ -237,8 +237,7 @@ func (r *orderRepository) GetOrderSummaries(ctx context.Context, orderIDs []int)
 		FROM order_items oi
 		JOIN product_variants pv ON oi.variant_id = pv.id
 		LEFT JOIN product_images pi ON pv.product_id = pi.product_id AND pi.is_primary = TRUE
-		WHERE oi.id IN (SELECT MIN(id) FROM order_items WHERE order_id IN (?) GROUP BY order_id
-		)
+		WHERE oi.id IN (SELECT MIN(id) FROM order_items WHERE order_id IN (?) GROUP BY order_id)
 	`, orderIDs)
 
 	if err != nil {

@@ -34,7 +34,6 @@ type CartRepositoryForOrder interface {
 	GetCartItemsByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.CartItem, error)
 	GetCartItemsByIDsTx(ctx context.Context, tx *sqlx.Tx, userID int, itemIDs []int) ([]domain.CartItem, error)
 	RemoveCartItemsWithTx(ctx context.Context, tx *sqlx.Tx, cartID int, itemIDs []int) error
-	ClearCartWithTx(ctx context.Context, tx *sqlx.Tx, cartID int) error
 }
 
 type ProductVariantRepositoryForOrder interface {

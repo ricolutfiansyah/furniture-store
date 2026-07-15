@@ -32,3 +32,7 @@ type AddToCartRequest struct {
 type UpdateQuantityRequest struct {
 	Quantity int `json:"quantity"`
 }
+
+type BulkRemoveCartItems struct {
+	CartItemIDs []int `json:"cart_item_ids"`
+}
