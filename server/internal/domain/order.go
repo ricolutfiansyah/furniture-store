@@ -26,6 +26,10 @@ type Order struct {
 	Items    []OrderItem   `db:"-" json:"items,omitempty"`
 	Statuses []OrderStatus `db:"-" json:"statuses,omitempty"`
 	User     *User         `db:"-" json:"user,omitempty"`
+
+	FirstItemName  string `db:"-" json:"first_item_name,omitempty"`
+	FirstItemImage string `db:"-" json:"first_item_image,omitempty"`
+	TotalItems     int    `db:"-" json:"total_items,omitempty"`
 }
 
 type OrderItem struct {

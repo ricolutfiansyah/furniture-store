@@ -218,3 +218,44 @@ func (r *orderRepository) GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.
 
 	return status, nil
 }
+
+type OrderSummaryDTO struct {
+	OrderID     int    `db:"order_id"`
+	TotalItems  int    `db:"total_items"`
+	VariantName string `db:"variant_name"`
+	ImageURL    string `db:"image_url"`
+}
+
+func (r *orderRepository) GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]OrderSummaryDTO, error) {
+	if len(orderIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT oi.order_id, (SELECT COUNT(*) FROM order_items WHERE order_id = oi.order_id) as total_items, pv.variant_name,
+			COALESCE(pi.image_url, '') as image_url
+		FROM order_items oi
+		JOIN product_variants pv ON oi.variant_id = pv.id
+		LEFT JOIN product_images pi ON pv.product_id = pi.product_id AND pi.is_primary = TRUE
+		WHERE oi.id IN (SELECT MIN(id) FROM order_items WHERE order_id IN (?) GROUP BY order_id
+		)
+	`, orderIDs)
+
+	if err != nil {
+		return nil, fmt.Errorf("build query summaries: %w", err)
+	}
+
+	query = r.db.Rebind(query)
+
+	var summaries []OrderSummaryDTO
+	if err := r.db.SelectContext(ctx, &summaries, query, args...); err != nil {
+		return nil, fmt.Errorf("get orders summaries: %w", err)
+	}
+
+	result := make(map[int]OrderSummaryDTO)
+	for _, s := range summaries {
+		result[s.OrderID] = s
+	}
+
+	return result, nil
+}

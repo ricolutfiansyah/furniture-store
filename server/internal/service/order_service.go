@@ -27,6 +27,7 @@ type OrderRepository interface {
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
 	GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.Tx, orderID int) (string, error)
+	GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]repository.OrderSummaryDTO, error)
 }
 
 type CartRepositoryForOrder interface {
@@ -223,6 +224,27 @@ func (s *OrderService) GetUserOrders(ctx context.Context, userID int) ([]domain.
 	orders, err := s.orderRepo.GetOrdersByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user order: %w", err)
+	}
+	if len(orders) == 0 {
+		return orders, nil
+	}
+
+	var orderIDs []int
+	for _, o := range orders {
+		orderIDs = append(orderIDs, o.ID)
+	}
+
+	summaries, err := s.orderRepo.GetOrderSummaries(ctx, orderIDs)
+	if err != nil {
+		log.Printf("failed to get summaries: %v", err)
+	}
+
+	for i, order := range orders {
+		if summary, exists := summaries[order.ID]; exists {
+			orders[i].FirstItemName = summary.VariantName
+			orders[i].FirstItemImage = summary.ImageURL
+			orders[i].TotalItems = summary.TotalItems
+		}
 	}
 
 	return orders, nil
