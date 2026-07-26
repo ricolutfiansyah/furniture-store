@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/nullable"
-	"furniture-api/internal/repository"
 	"furniture-api/internal/validation"
 	"log"
 	"slices"
@@ -27,7 +26,7 @@ type OrderRepository interface {
 	GetOrderItemsByOrderID(ctx context.Context, orderID int) ([]domain.OrderItem, error)
 	GetOrderStatusesByOrderID(ctx context.Context, orderID int) ([]domain.OrderStatus, error)
 	GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.Tx, orderID int) (string, error)
-	GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]repository.OrderSummaryDTO, error)
+	GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]domain.OrderSummary, error)
 }
 
 type CartRepositoryForOrder interface {

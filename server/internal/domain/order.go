@@ -68,3 +68,10 @@ type UpdateOrderStatusReq struct {
 	Status string `json:"status"`
 	Notes  string `json:"notes"`
 }
+
+type OrderSummary struct {
+	OrderID     int    `db:"order_id"`
+	TotalItems  int    `db:"total_items"`
+	VariantName string `db:"variant_name"`
+	ImageURL    string `db:"image_url"`
+}

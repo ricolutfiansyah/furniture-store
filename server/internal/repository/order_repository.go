@@ -219,14 +219,7 @@ func (r *orderRepository) GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.
 	return status, nil
 }
 
-type OrderSummaryDTO struct {
-	OrderID     int    `db:"order_id"`
-	TotalItems  int    `db:"total_items"`
-	VariantName string `db:"variant_name"`
-	ImageURL    string `db:"image_url"`
-}
-
-func (r *orderRepository) GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]OrderSummaryDTO, error) {
+func (r *orderRepository) GetOrderSummaries(ctx context.Context, orderIDs []int) (map[int]domain.OrderSummary, error) {
 	if len(orderIDs) == 0 {
 		return nil, nil
 	}
@@ -246,12 +239,12 @@ func (r *orderRepository) GetOrderSummaries(ctx context.Context, orderIDs []int)
 
 	query = r.db.Rebind(query)
 
-	var summaries []OrderSummaryDTO
+	var summaries []domain.OrderSummary
 	if err := r.db.SelectContext(ctx, &summaries, query, args...); err != nil {
 		return nil, fmt.Errorf("get orders summaries: %w", err)
 	}
 
-	result := make(map[int]OrderSummaryDTO)
+	result := make(map[int]domain.OrderSummary)
 	for _, s := range summaries {
 		result[s.OrderID] = s
 	}
