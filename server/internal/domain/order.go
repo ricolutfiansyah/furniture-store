@@ -57,7 +57,7 @@ type OrderStatus struct {
 type CheckoutRequest struct {
 	AddressID   int    `json:"address_id"`
 	Notes       string `json:"notes"`
-	CartItemIDs []int  `json:"cart_items_ids"`
+	CartItemIDs []int  `json:"cart_item_ids"`
 }
 
 type CheckoutResponse struct {

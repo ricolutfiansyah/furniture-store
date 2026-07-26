@@ -103,7 +103,7 @@ func (r *cartRepository) AddItem(ctx context.Context, cartID, variantID, quantit
 	return nil
 }
 
-func (r *cartRepository) findByCartAndVariant(ctx context.Context, cartID, variantID int) (*domain.CartItem, error) {
+func (r *cartRepository) GetCartItem(ctx context.Context, cartID, variantID int) (*domain.CartItem, error) {
 	const query = `
 					SELECT id, cart_id, variant_id, quantity, price_at_time, created_at, updated_at
 					FROM cart_items
@@ -230,4 +230,21 @@ func (r *cartRepository) RemoveItems(ctx context.Context, userID int, itemIDs []
 	}
 
 	return nil
+}
+
+func (r *cartRepository) GetCartItemByID(ctx context.Context, userID, cartItemID int) (*domain.CartItem, error) {
+	const query = `
+		SELECT ci.id, ci.cart_id, ci.variant_id, ci.quantity, ci.price_at_time, ci.created_at, ci.updated_at
+		FROM cart_items ci
+		JOIN carts c ON ci.cart_id = c.id
+		WHERE ci.id = ? AND c.user_id = ?`
+
+	var item domain.CartItem
+	if err := r.db.GetContext(ctx, &item, query, cartItemID, userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCartItemNotFound
+		}
+		return nil, fmt.Errorf("get cart item by id: %w", err)
+	}
+	return &item, nil
 }

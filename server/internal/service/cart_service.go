@@ -15,6 +15,8 @@ type CartRepository interface {
 	UpdateItemQuantity(ctx context.Context, userID, cartItemID, quantity int) error
 	RemoveItem(ctx context.Context, userID, cartItemID int) error
 	RemoveItems(ctx context.Context, userID int, itemIDs []int) error
+	GetCartItem(ctx context.Context, cartID, variantID int) (*domain.CartItem, error)
+	GetCartItemByID(ctx context.Context, userID, cartItemID int) (*domain.CartItem, error)
 }
 
 type ProductVariantRepository interface {
@@ -59,17 +61,29 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.Add
 	product, err := s.productRepo.GetByID(ctx, variant.ProductID)
 	if err != nil {
 		if errors.Is(err, repository.ErrProductNotFound) {
-			return ErrVariantNotFound
+			return ErrProductNotFound
 		}
 		return fmt.Errorf("get product: %w", err)
 	}
-
-	PriceAtTime := product.BasePrice + variant.AdditionalPrice
 
 	cart, err := s.cartRepo.GetOrCreateCart(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("get or create cart: %w", err)
 	}
+
+	existingQty := 0
+	existingItem, err := s.cartRepo.GetCartItem(ctx, cart.ID, req.VariantID)
+	if err == nil {
+		existingQty = existingItem.Quantity
+	} else if !errors.Is(err, repository.ErrCartItemNotFound) {
+		return fmt.Errorf("check existing cart item: %w", err)
+	}
+
+	if variant.StockQuantity < (existingQty + req.Quantity) {
+		return ErrInsufficientStock
+	}
+
+	PriceAtTime := product.BasePrice + variant.AdditionalPrice
 
 	if err = s.cartRepo.AddItem(ctx, cart.ID, req.VariantID, req.Quantity, PriceAtTime); err != nil {
 		return fmt.Errorf("add item to cart: %w", err)
@@ -96,6 +110,26 @@ func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, qu
 			return fmt.Errorf("remove item: %w", err)
 		}
 		return nil
+	}
+
+	cartItem, err := s.cartRepo.GetCartItemByID(ctx, userID, cartItemID)
+	if err != nil {
+		if errors.Is(err, repository.ErrCartItemNotFound) {
+			return ErrCartItemNotFound
+		}
+		return fmt.Errorf("get cart item by id: %w", err)
+	}
+
+	variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
+	if err != nil {
+		if errors.Is(err, repository.ErrVariantNotFound) {
+			return ErrVariantNotFound
+		}
+		return fmt.Errorf("get variant: %w", err)
+	}
+
+	if variant.StockQuantity < quantity {
+		return ErrInsufficientStock
 	}
 
 	if err := s.cartRepo.UpdateItemQuantity(ctx, userID, cartItemID, quantity); err != nil {
