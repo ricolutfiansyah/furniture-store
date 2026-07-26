@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
+	"furniture-api/internal/repository/queries"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -20,11 +21,7 @@ func NewUserRepository(db *sqlx.DB) *userRepository {
 }
 
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
-	const query = `
-				INSERT INTO users (public_id, email, password_hash, full_name, phone, address, role) 
-				VALUES (:public_id, :email, :password_hash, :full_name, :phone, :address, :role)`
-
-	result, err := r.db.NamedExecContext(ctx, query, user)
+	result, err := r.db.NamedExecContext(ctx, queries.UserInsert, user)
 	if err != nil {
 		if isDuplicateKeyError(err, "email") {
 			return domain.ErrEmailAlreadyRegistered
@@ -47,8 +44,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 		CreatedAt time.Time `db:"created_at"`
 		UpdatedAt time.Time `db:"updated_at"`
 	}
-	const selectQuery = `SELECT is_active, created_at, updated_at FROM users WHERE id = ?`
-	if err := r.db.GetContext(ctx, &timestamps, selectQuery, user.ID); err != nil {
+	if err := r.db.GetContext(ctx, &timestamps, queries.UserSelectTimestamps, user.ID); err != nil {
 		return fmt.Errorf("fetch created user timestamps: %w", err)
 	}
 	user.IsActive = timestamps.IsActive
@@ -59,10 +55,8 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
-	const query = `SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at FROM users WHERE email = ?`
-
 	var user domain.User
-	err := r.db.GetContext(ctx, &user, query, email)
+	err := r.db.GetContext(ctx, &user, queries.UserSelectByEmail, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
@@ -74,12 +68,8 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 }
 
 func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, error) {
-	const query = `
-				SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at 
-				FROM users WHERE id = ?`
-
 	var user domain.User
-	err := r.db.GetContext(ctx, &user, query, id)
+	err := r.db.GetContext(ctx, &user, queries.UserSelectByID, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
@@ -91,12 +81,8 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 }
 
 func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*domain.User, error) {
-	const query = `
-				SELECT id, public_id, email, password_hash, full_name, phone, address, role, is_active, created_at, updated_at 
-				FROM users WHERE public_id = ?`
-
 	var user domain.User
-	err := r.db.GetContext(ctx, &user, query, publicID)
+	err := r.db.GetContext(ctx, &user, queries.UserSelectByPublicID, publicID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
@@ -108,9 +94,7 @@ func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*
 }
 
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
-	const query = `UPDATE users SET full_name = :full_name, phone = :phone, address = :address, updated_at = NOW() WHERE id = :id`
-
-	result, err := r.db.NamedExecContext(ctx, query, user)
+	result, err := r.db.NamedExecContext(ctx, queries.UserUpdate, user)
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}

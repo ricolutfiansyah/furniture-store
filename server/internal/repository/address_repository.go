@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
+	"furniture-api/internal/repository/queries"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -19,13 +20,7 @@ func NewAddressRepository(db *sqlx.DB) *addressRepository {
 }
 
 func (r *addressRepository) Create(ctx context.Context, address *domain.UserAddress) error {
-	const query = `
-				INSERT INTO user_addresses 
-					(user_id, label, recipient_name, phone, province, city, district, postal_code, address_line, is_default)
-				VALUES
-					(:user_id, :label, :recipient_name, :phone, :province, :city, :district, :postal_code, :address_line, :is_default)
-			`
-	result, err := r.db.NamedExecContext(ctx, query, address)
+	result, err := r.db.NamedExecContext(ctx, queries.AddressInsert, address)
 	if err != nil {
 		return fmt.Errorf("insert address: %w", err)
 	}
@@ -40,25 +35,16 @@ func (r *addressRepository) Create(ctx context.Context, address *domain.UserAddr
 }
 
 func (r *addressRepository) CountByUserID(ctx context.Context, userID int) (int, error) {
-	const query = `SELECT COUNT(*) FROM user_addresses WHERE user_id = ?`
-
 	var count int
-	if err := r.db.GetContext(ctx, &count, query, userID); err != nil {
+	if err := r.db.GetContext(ctx, &count, queries.AddressCountByUserID, userID); err != nil {
 		return 0, fmt.Errorf("count addresses: %w", err)
 	}
 	return count, nil
 }
 
 func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domain.UserAddress, error) {
-	const query = `
-				SELECT id, user_id, label, recipient_name, phone, province, city, district,
-						postal_code, address_line, is_default, created_at, updated_at
-				FROM user_addresses
-				WHERE id = ? AND user_id = ?
-			`
-
 	var address domain.UserAddress
-	err := r.db.GetContext(ctx, &address, query, id, userID)
+	err := r.db.GetContext(ctx, &address, queries.AddressSelectByID, id, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAddressNotFound
@@ -70,16 +56,8 @@ func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domai
 }
 
 func (r *addressRepository) GetByIDTx(ctx context.Context, tx *sqlx.Tx, id, userID int) (*domain.UserAddress, error) {
-	const query = `
-				SELECT id, user_id, label, recipient_name, phone, province, city, district,
-						postal_code, address_line, is_default, created_at, updated_at
-				FROM user_addresses
-				WHERE id = ? AND user_id = ?
-				FOR UPDATE
-			`
-
 	var address domain.UserAddress
-	err := tx.GetContext(ctx, &address, query, id, userID)
+	err := tx.GetContext(ctx, &address, queries.AddressSelectByIDForUpdate, id, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAddressNotFound
@@ -91,32 +69,17 @@ func (r *addressRepository) GetByIDTx(ctx context.Context, tx *sqlx.Tx, id, user
 }
 
 func (r *addressRepository) ListByUserID(ctx context.Context, userID int) ([]domain.UserAddress, error) {
-	const query = `
-				SELECT id, user_id, label, recipient_name, phone, province, city, district,
-						postal_code, address_line, is_default, created_at, updated_at
-				FROM user_addresses		
-				WHERE user_id = ?
-				ORDER BY is_default DESC, created_at DESC
-			`
-
 	addresses := []domain.UserAddress{}
-	if err := r.db.SelectContext(ctx, &addresses, query, userID); err != nil {
-		return nil, fmt.Errorf("list addresses (tx): %w", err)
+	if err := r.db.SelectContext(ctx, &addresses, queries.AddressSelectByUserID, userID); err != nil {
+		return nil, fmt.Errorf("list addresses: %w", err)
 	}
 
 	return addresses, nil
 }
 
 func (r *addressRepository) ListByUserIDTx(ctx context.Context, tx *sqlx.Tx, userID int) ([]domain.UserAddress, error) {
-	const query = `
-				SELECT id, user_id, label, recipient_name, phone, province, city, district,
-						postal_code, address_line, is_default, created_at, updated_at
-				FROM user_addresses		
-				WHERE user_id = ?
-			`
-
 	addresses := []domain.UserAddress{}
-	if err := tx.SelectContext(ctx, &addresses, query, userID); err != nil {
+	if err := tx.SelectContext(ctx, &addresses, queries.AddressSelectByUserIDTx, userID); err != nil {
 		return nil, fmt.Errorf("list addresses (tx): %w", err)
 	}
 
@@ -124,15 +87,7 @@ func (r *addressRepository) ListByUserIDTx(ctx context.Context, tx *sqlx.Tx, use
 }
 
 func (r *addressRepository) Update(ctx context.Context, address *domain.UserAddress) error {
-	const query = `
-				UPDATE user_addresses
-				SET label = :label, recipient_name = :recipient_name, phone = :phone,
-					province = :province, city = :city, district := district,
-					postal_code = :postal_code, address_line = :address_line
-				WHERE id = :id AND user_id = :user_id
-			`
-
-	result, err := r.db.NamedExecContext(ctx, query, address)
+	result, err := r.db.NamedExecContext(ctx, queries.AddressUpdate, address)
 	if err != nil {
 		return fmt.Errorf("update address: %w", err)
 	}
@@ -149,9 +104,7 @@ func (r *addressRepository) Update(ctx context.Context, address *domain.UserAddr
 }
 
 func (r *addressRepository) DeleteTx(ctx context.Context, tx *sqlx.Tx, id, userID int) error {
-	const query = `DELETE FROM user_addresses WHERE id = ? AND user_id = ?`
-
-	result, err := tx.ExecContext(ctx, query, id, userID)
+	result, err := tx.ExecContext(ctx, queries.AddressDelete, id, userID)
 	if err != nil {
 		return fmt.Errorf("delete address: %w", err)
 	}
@@ -168,9 +121,7 @@ func (r *addressRepository) DeleteTx(ctx context.Context, tx *sqlx.Tx, id, userI
 }
 
 func (r *addressRepository) UnsetDefaultByUserID(ctx context.Context, tx *sqlx.Tx, userID int) error {
-	const query = `UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?`
-
-	if _, err := tx.ExecContext(ctx, query, userID); err != nil {
+	if _, err := tx.ExecContext(ctx, queries.AddressUnsetDefault, userID); err != nil {
 		return fmt.Errorf("unset default addresses: %w", err)
 	}
 
@@ -178,8 +129,7 @@ func (r *addressRepository) UnsetDefaultByUserID(ctx context.Context, tx *sqlx.T
 }
 
 func (r *addressRepository) SetDefault(ctx context.Context, tx *sqlx.Tx, id, userID int) error {
-	query := `UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?`
-	result, err := tx.ExecContext(ctx, query, id, userID)
+	result, err := tx.ExecContext(ctx, queries.AddressSetDefault, id, userID)
 	if err != nil {
 		return fmt.Errorf("set default address: %w", err)
 	}
