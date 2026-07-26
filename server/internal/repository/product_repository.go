@@ -107,7 +107,7 @@ func (r *productRepository) GetImagesByProductID(ctx context.Context, productID 
 				SELECT id, product_id, variant_id, image_url, is_primary, sort_order, created_at 
 				FROM product_images 
 				WHERE product_id = ? 
-				ORDER_BY is_active DESC, sort_order ASC`
+				ORDER BY is_primary DESC, sort_order ASC`
 
 	images := []domain.ProductImage{}
 	err := r.db.SelectContext(ctx, &images, query, productID)

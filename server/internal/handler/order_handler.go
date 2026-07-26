@@ -79,7 +79,8 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 func (h *OrderHandler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	authUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		response.WriteError(w, http.StatusUnauthorized, "unautorized")
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	orders, err := h.orderService.GetUserOrders(r.Context(), authUser.ID)

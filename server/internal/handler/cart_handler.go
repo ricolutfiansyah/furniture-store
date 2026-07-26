@@ -35,16 +35,18 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 	authUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
 		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
 	}
 
 	var req domain.AddToCartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.WriteError(w, http.StatusBadRequest, "invalid body request")
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.VariantID <= 0 {
 		response.WriteError(w, http.StatusBadRequest, "variant id is required")
+		return
 	}
 
 	err := h.cartService.AddToCart(r.Context(), authUser.ID, &req)

@@ -47,7 +47,7 @@ func (h *AddressHandler) CreateAddress(w http.ResponseWriter, r *http.Request) {
 
 	address, err := h.addressService.CreateAddress(r.Context(), user.ID, req)
 	if err != nil {
-		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); !ok {
+		if valErrs, ok := errors.AsType[validation.ValidationErrors](err); ok {
 			response.WriteValidationErrors(w, http.StatusBadRequest, valErrs)
 			return
 		}
