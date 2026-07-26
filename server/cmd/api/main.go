@@ -46,7 +46,7 @@ func main() {
 	// --- Service ---
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	productService := service.NewProductService(productRepo)
-	cartService := service.NewCartService(cartRepo, productRepo, productRepo)
+	cartService := service.NewCartService(cartRepo, productRepo)
 	orderService := service.NewOrderService(orderRepo, cartRepo, productRepo, userRepo, addressRepo, db)
 	addressService := service.NewAddressService(addressRepo, db)
 
@@ -74,7 +74,7 @@ func main() {
 	// server check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Ping(); err != nil {
-			response.WriteError(w, http.StatusServiceUnavailable, "database unavailale")
+			response.WriteError(w, http.StatusServiceUnavailable, "database unavailable")
 			return
 		}
 		response.WriteSuccess(w, http.StatusOK, nil, "server is healthy")

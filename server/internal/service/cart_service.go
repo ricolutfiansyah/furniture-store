@@ -18,22 +18,18 @@ type CartRepository interface {
 	GetCartItemByID(ctx context.Context, userID, cartItemID int) (*domain.CartItem, error)
 }
 
-type ProductVariantRepository interface {
+type ProductCatalogRepository interface {
 	GetVariantByID(ctx context.Context, id int) (*domain.ProductVariant, error)
-}
-
-type ProductRepositoryForCart interface {
 	GetByID(ctx context.Context, id int) (*domain.Product, error)
 }
 
 type CartService struct {
 	cartRepo    CartRepository
-	variantRepo ProductVariantRepository
-	productRepo ProductRepositoryForCart
+	productRepo ProductCatalogRepository
 }
 
-func NewCartService(cartRepo CartRepository, variantRepo ProductVariantRepository, productRepo ProductRepositoryForCart) *CartService {
-	return &CartService{cartRepo: cartRepo, variantRepo: variantRepo, productRepo: productRepo}
+func NewCartService(cartRepo CartRepository, productRepo ProductCatalogRepository) *CartService {
+	return &CartService{cartRepo: cartRepo, productRepo: productRepo}
 }
 
 func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.AddToCartRequest) error {
@@ -45,7 +41,7 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.Add
 		return fmt.Errorf("variant id is required: %w", domain.ErrInvalidVariantID)
 	}
 
-	variant, err := s.variantRepo.GetVariantByID(ctx, req.VariantID)
+	variant, err := s.productRepo.GetVariantByID(ctx, req.VariantID)
 	if err != nil {
 		if errors.Is(err, domain.ErrVariantNotFound) {
 			return domain.ErrVariantNotFound
@@ -119,7 +115,7 @@ func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, qu
 		return fmt.Errorf("get cart item by id: %w", err)
 	}
 
-	variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
+	variant, err := s.productRepo.GetVariantByID(ctx, cartItem.VariantID)
 	if err != nil {
 		if errors.Is(err, domain.ErrVariantNotFound) {
 			return domain.ErrVariantNotFound
