@@ -32,7 +32,7 @@ func (r *orderRepository) CreateOrderWithTx(ctx context.Context, tx *sqlx.Tx, or
 	result, err := tx.NamedExecContext(ctx, query, order)
 	if err != nil {
 		if isDuplicateKeyError(err, "order_number") {
-			return ErrDuplicateOrderNumber
+			return domain.ErrDuplicateOrderNumber
 		}
 		return fmt.Errorf("create order: %w", err)
 	}
@@ -120,7 +120,7 @@ func (r *orderRepository) GetOrderByID(ctx context.Context, userID, orderID int)
 	var order domain.Order
 	if err := r.db.GetContext(ctx, &order, query, orderID, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrOrderNotFound
+			return nil, domain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("get order by id: %w", err)
 	}
@@ -139,7 +139,7 @@ func (r *orderRepository) GetOrderByIDForAdmin(ctx context.Context, orderID int)
 	var order domain.Order
 	if err := r.db.GetContext(ctx, &order, query, orderID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrOrderNotFound
+			return nil, domain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("get order by id for admin: %w", err)
 	}
@@ -199,7 +199,7 @@ func (r *orderRepository) UpdateOrderStatusWithTx(ctx context.Context, tx *sqlx.
 		return fmt.Errorf("update order status rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrOrderNotFound
+		return domain.ErrOrderNotFound
 	}
 
 	return nil
@@ -211,7 +211,7 @@ func (r *orderRepository) GetOrderStatusForUpdate(ctx context.Context, tx *sqlx.
 	var status string
 	if err := tx.GetContext(ctx, &status, query, orderID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrOrderNotFound
+			return "", domain.ErrOrderNotFound
 		}
 		return "", fmt.Errorf("get order status for update: %w", err)
 	}

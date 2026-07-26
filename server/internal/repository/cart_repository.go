@@ -23,7 +23,7 @@ func (r *cartRepository) GetOrCreateCart(ctx context.Context, userID int) (*doma
 	if err == nil {
 		return cart, nil
 	}
-	if !errors.Is(err, ErrCartNotFound) {
+	if !errors.Is(err, domain.ErrCartNotFound) {
 		return nil, fmt.Errorf("get cart: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func (r *cartRepository) findByUserID(ctx context.Context, userID int) (*domain.
 	err := r.db.GetContext(ctx, &cart, query, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCartNotFound
+			return nil, domain.ErrCartNotFound
 		}
 		return nil, fmt.Errorf("find cart by user id: %w", err)
 	}
@@ -113,7 +113,7 @@ func (r *cartRepository) GetCartItem(ctx context.Context, cartID, variantID int)
 	err := r.db.GetContext(ctx, &item, query, cartID, variantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCartItemNotFound
+			return nil, domain.ErrCartItemNotFound
 		}
 		return nil, fmt.Errorf("find cart item %w", err)
 	}
@@ -136,7 +136,7 @@ func (r *cartRepository) UpdateItemQuantity(ctx context.Context, userID, cartIte
 		return fmt.Errorf("update item quantity rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrCartItemNotFound
+		return domain.ErrCartItemNotFound
 	}
 
 	return nil
@@ -157,7 +157,7 @@ func (r *cartRepository) RemoveItem(ctx context.Context, userID, cartItemID int)
 		return fmt.Errorf("remove cart item rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrCartItemNotFound
+		return domain.ErrCartItemNotFound
 	}
 
 	return nil
@@ -242,7 +242,7 @@ func (r *cartRepository) GetCartItemByID(ctx context.Context, userID, cartItemID
 	var item domain.CartItem
 	if err := r.db.GetContext(ctx, &item, query, cartItemID, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCartItemNotFound
+			return nil, domain.ErrCartItemNotFound
 		}
 		return nil, fmt.Errorf("get cart item by id: %w", err)
 	}

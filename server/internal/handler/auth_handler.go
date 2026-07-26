@@ -6,9 +6,7 @@ import (
 	"errors"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/middleware"
-	"furniture-api/internal/repository"
 	"furniture-api/internal/response"
-	"furniture-api/internal/service"
 	"furniture-api/internal/validation"
 	"log"
 	"net/http"
@@ -37,10 +35,12 @@ func (h *AuthHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.authService.GetProfile(r.Context(), authUser.PublicID)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			response.WriteError(w, http.StatusNotFound, "user not found")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
 			return
 		}
+		log.Printf("get profile error: %v", err)
 		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
@@ -62,13 +62,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, service.ErrEmailAlreadyRegistered):
-			response.WriteError(w, http.StatusConflict, "email already registered")
-		default:
-			log.Printf("register error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+
+		log.Printf("register error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -78,7 +79,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -89,15 +90,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, service.ErrInvalidCredentials):
-			response.WriteError(w, http.StatusUnauthorized, "invalid credentials")
-		default:
-			log.Printf("login error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+
+		log.Printf("login error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	response.WriteSuccess(w, http.StatusOK, resp, "login successfull")
+	response.WriteSuccess(w, http.StatusOK, resp, "login successful")
 }

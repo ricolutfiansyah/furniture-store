@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"furniture-api/internal/domain"
-	"furniture-api/internal/repository"
 	"furniture-api/internal/response"
 	"log"
 	"net/http"
@@ -65,7 +64,7 @@ func AuthMiddleware(jwtSecret string, userRepo UserFinder) func(http.Handler) ht
 
 			user, err := userRepo.FindByPublicID(r.Context(), publicID)
 			if err != nil {
-				if errors.Is(err, repository.ErrUserNotFound) {
+				if errors.Is(err, domain.ErrUserNotFound) {
 					response.WriteError(w, http.StatusUnauthorized, "user not found")
 					return
 				}

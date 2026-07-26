@@ -59,7 +59,7 @@ func (r *productRepository) GetBySlug(ctx context.Context, slug string) (*domain
 	err := r.db.GetContext(ctx, &product, query, slug)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrProductNotFound
+			return nil, domain.ErrProductNotFound
 		}
 		return nil, fmt.Errorf("get product by slug: %w", err)
 	}
@@ -78,7 +78,7 @@ func (r *productRepository) GetByID(ctx context.Context, id int) (*domain.Produc
 	err := r.db.GetContext(ctx, &product, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrProductNotFound
+			return nil, domain.ErrProductNotFound
 		}
 		return nil, fmt.Errorf("get product by id: %w", err)
 	}
@@ -125,7 +125,7 @@ func (r *productRepository) GetCategoryByID(ctx context.Context, categoryID int)
 	err := r.db.GetContext(ctx, &category, query, categoryID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrCategoryNotFound
+			return nil, domain.ErrCategoryNotFound
 		}
 		return nil, fmt.Errorf("get category by id: %w", err)
 	}
@@ -144,7 +144,7 @@ func (r *productRepository) GetVariantByID(ctx context.Context, id int) (*domain
 	err := r.db.GetContext(ctx, &variant, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrVariantNotFound
+			return nil, domain.ErrVariantNotFound
 		}
 		return nil, fmt.Errorf("get variant by id: %w", err)
 	}
@@ -164,7 +164,7 @@ func (r *productRepository) DecreaseStockWithTx(ctx context.Context, tx *sqlx.Tx
 		return fmt.Errorf("decrease stock rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrInsufficientStock
+		return domain.ErrInsufficientStock
 	}
 
 	return nil

@@ -61,7 +61,7 @@ func (r *addressRepository) GetByID(ctx context.Context, id, userID int) (*domai
 	err := r.db.GetContext(ctx, &address, query, id, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAddressNotFound
+			return nil, domain.ErrAddressNotFound
 		}
 		return nil, fmt.Errorf("get address by id: %w", err)
 	}
@@ -82,7 +82,7 @@ func (r *addressRepository) GetByIDTx(ctx context.Context, tx *sqlx.Tx, id, user
 	err := tx.GetContext(ctx, &address, query, id, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAddressNotFound
+			return nil, domain.ErrAddressNotFound
 		}
 		return nil, fmt.Errorf("get address by id (tx): %w", err)
 	}
@@ -142,7 +142,7 @@ func (r *addressRepository) Update(ctx context.Context, address *domain.UserAddr
 		return fmt.Errorf("get rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrAddressNotFound
+		return domain.ErrAddressNotFound
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (r *addressRepository) DeleteTx(ctx context.Context, tx *sqlx.Tx, id, userI
 		return fmt.Errorf("get rows affected (tx): %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrAddressNotFound
+		return domain.ErrAddressNotFound
 	}
 
 	return nil
@@ -189,7 +189,7 @@ func (r *addressRepository) SetDefault(ctx context.Context, tx *sqlx.Tx, id, use
 		return fmt.Errorf("get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return ErrAddressNotFound
+		return domain.ErrAddressNotFound
 	}
 	return nil
 }

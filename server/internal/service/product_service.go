@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
-	"furniture-api/internal/repository"
 	"log"
 )
 
@@ -59,8 +58,8 @@ func (s *ProductService) GetAll(ctx context.Context, page, pageSize int) (*domai
 func (s *ProductService) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
 	product, err := s.productRepo.GetBySlug(ctx, slug)
 	if err != nil {
-		if errors.Is(err, repository.ErrProductNotFound) {
-			return nil, ErrProductNotFound
+		if errors.Is(err, domain.ErrProductNotFound) {
+			return nil, domain.ErrProductNotFound
 		}
 		return nil, fmt.Errorf("get product by slug: %w", err)
 	}

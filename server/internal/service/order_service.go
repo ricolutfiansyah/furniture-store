@@ -95,10 +95,10 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		return nil, fmt.Errorf("find user for checkout: %w", err)
 	}
 	if !user.FullName.Valid || user.FullName.String == "" {
-		return nil, ErrFullNameRequired
+		return nil, domain.ErrFullNameRequired
 	}
 	if !user.Phone.Valid || user.Phone.String == "" {
-		return nil, ErrPhoneRequired
+		return nil, domain.ErrPhoneRequired
 	}
 
 	address, err := s.addressRepo.GetByID(ctx, req.AddressID, userID)
@@ -122,7 +122,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		return nil, fmt.Errorf("get cart items: %w", err)
 	}
 	if len(cartItems) == 0 {
-		return nil, ErrCartEmpty
+		return nil, domain.ErrCartEmpty
 	}
 
 	if len(cartItems) != len(req.CartItemIDs) {
@@ -137,8 +137,8 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 	for _, cartItem := range cartItems {
 		variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
 		if err != nil {
-			if errors.Is(err, repository.ErrVariantNotFound) {
-				return nil, fmt.Errorf("%w: variant id %d", ErrVariantNotFound, cartItem.VariantID)
+			if errors.Is(err, domain.ErrVariantNotFound) {
+				return nil, fmt.Errorf("%w: variant id %d", domain.ErrVariantNotFound, cartItem.VariantID)
 			}
 			return nil, fmt.Errorf("get variant: %w", err)
 		}
@@ -155,8 +155,8 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		})
 
 		if err := s.variantRepo.DecreaseStockWithTx(ctx, tx, cartItem.VariantID, cartItem.Quantity); err != nil {
-			if errors.Is(err, repository.ErrInsufficientStock) {
-				return nil, fmt.Errorf("%w: variant %s", ErrInsufficientStock, variant.VariantName)
+			if errors.Is(err, domain.ErrInsufficientStock) {
+				return nil, fmt.Errorf("%w: variant %s", domain.ErrInsufficientStock, variant.VariantName)
 			}
 			return nil, fmt.Errorf("decrease stock: %w", err)
 		}
@@ -184,7 +184,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 		if err == nil {
 			break
 		}
-		if errors.Is(err, repository.ErrDuplicateOrderNumber) && attempt < maxOrderNumberAttempts {
+		if errors.Is(err, domain.ErrDuplicateOrderNumber) && attempt < maxOrderNumberAttempts {
 			continue
 		}
 		return nil, fmt.Errorf("create order: %w", err)
@@ -252,8 +252,8 @@ func (s *OrderService) GetUserOrders(ctx context.Context, userID int) ([]domain.
 func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) (*domain.Order, error) {
 	order, err := s.orderRepo.GetOrderByID(ctx, userID, orderID)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
-			return nil, ErrOrderNotFound
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return nil, domain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("get order by id: %w", err)
 	}
@@ -264,8 +264,8 @@ func (s *OrderService) GetOrderDetail(ctx context.Context, userID, orderID int) 
 func (s *OrderService) GetOrderDetailForAdmin(ctx context.Context, orderID int) (*domain.Order, error) {
 	order, err := s.orderRepo.GetOrderByIDForAdmin(ctx, orderID)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
-			return nil, ErrOrderNotFound
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return nil, domain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("get order by id for admin: %w", err)
 	}
@@ -313,7 +313,7 @@ func isValidStatusTransition(from, to string) bool {
 
 func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req domain.UpdateOrderStatusReq) error {
 	if _, ok := orderStatusTransitions[req.Status]; !ok {
-		return fmt.Errorf("%w: %q", ErrInvalidOrderStatus, req.Status)
+		return fmt.Errorf("%w: %q", domain.ErrInvalidOrderStatus, req.Status)
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
@@ -324,14 +324,14 @@ func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int, req d
 
 	currentStatus, err := s.orderRepo.GetOrderStatusForUpdate(ctx, tx, orderID)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
-			return ErrOrderNotFound
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			return domain.ErrOrderNotFound
 		}
 		return fmt.Errorf("get current order status: %w", err)
 	}
 
 	if !isValidStatusTransition(currentStatus, req.Status) {
-		return fmt.Errorf("%w: %s -> %s", ErrInvalidStatusTransition, currentStatus, req.Status)
+		return fmt.Errorf("%w: %s -> %s", domain.ErrInvalidStatusTransition, currentStatus, req.Status)
 	}
 
 	timestampCol := orderStatusTimestampColumn[req.Status]

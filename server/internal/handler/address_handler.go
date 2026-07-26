@@ -6,7 +6,6 @@ import (
 	"errors"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/middleware"
-	"furniture-api/internal/repository"
 	"furniture-api/internal/response"
 	"furniture-api/internal/validation"
 	"log"
@@ -52,13 +51,14 @@ func (h *AddressHandler) CreateAddress(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, repository.ErrAddressNotFound):
-			response.WriteError(w, http.StatusNotFound, "address not found")
-		default:
-			log.Printf("create address error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+
+		log.Printf("create address error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -108,13 +108,14 @@ func (h *AddressHandler) UpdateAddress(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, repository.ErrAddressNotFound):
-			response.WriteError(w, http.StatusNotFound, "address not found")
-		default:
-			log.Printf("update address error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+
+		log.Printf("update address error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -136,13 +137,13 @@ func (h *AddressHandler) DeleteAddress(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.addressService.DeleteAddress(r.Context(), id, user.ID); err != nil {
-		switch {
-		case errors.Is(err, repository.ErrAddressNotFound):
-			response.WriteError(w, http.StatusNotFound, "address not found")
-		default:
-			log.Printf("delete address error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+		log.Printf("delete address error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -164,13 +165,13 @@ func (h *AddressHandler) SetDefaultAddress(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.addressService.SetDefaultAddress(r.Context(), id, user.ID); err != nil {
-		switch {
-		case errors.Is(err, repository.ErrAddressNotFound):
-			response.WriteError(w, http.StatusNotFound, "address not found")
-		default:
-			log.Printf("set default address error: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+		log.Printf("set default address error: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 

@@ -7,7 +7,6 @@ import (
 	"furniture-api/internal/domain"
 	"furniture-api/internal/middleware"
 	"furniture-api/internal/response"
-	"furniture-api/internal/service"
 	"log"
 	"net/http"
 	"strconv"
@@ -49,19 +48,14 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.cartService.AddToCart(r.Context(), authUser.ID, &req)
-	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidQuantity):
-			response.WriteError(w, http.StatusBadRequest, "quantity must be greater than 0")
-		case errors.Is(err, service.ErrVariantNotFound):
-			response.WriteError(w, http.StatusNotFound, "variant not found")
-		case errors.Is(err, service.ErrInsufficientStock):
-			response.WriteError(w, http.StatusConflict, "insufficient stock")
-		default:
-			log.Printf("add to cart: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+	if err := h.cartService.AddToCart(r.Context(), authUser.ID, &req); err != nil {
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+		log.Printf("add to cart: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -105,13 +99,13 @@ func (h *CartHandler) UpdateQuantity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = h.cartService.UpdateQuantity(r.Context(), authUser.ID, itemID, req.Quantity); err != nil {
-		switch {
-		case errors.Is(err, service.ErrCartItemNotFound):
-			response.WriteError(w, http.StatusNotFound, "cart item not found")
-		default:
-			log.Printf("update quantity: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+		log.Printf("update quantity: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -132,13 +126,13 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = h.cartService.RemoveItem(r.Context(), authUser.ID, itemID); err != nil {
-		switch {
-		case errors.Is(err, service.ErrCartItemNotFound):
-			response.WriteError(w, http.StatusNotFound, "cart item not found")
-		default:
-			log.Printf("remove item: %v", err)
-			response.WriteError(w, http.StatusInternalServerError, "internal server error")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
+			return
 		}
+		log.Printf("remove item: %v", err)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/nullable"
-	"furniture-api/internal/repository"
 	"furniture-api/internal/validation"
 	"strings"
 	"time"
@@ -64,11 +63,11 @@ func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest)
 	}
 
 	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
-	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 		return nil, fmt.Errorf("check existing email: %w", err)
 	}
 	if existing != nil {
-		return nil, ErrEmailAlreadyRegistered
+		return nil, domain.ErrEmailAlreadyRegistered
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -88,8 +87,8 @@ func (s *AuthService) Register(ctx context.Context, req *domain.RegisterRequest)
 	}
 
 	if err = s.userRepo.Create(ctx, user); err != nil {
-		if errors.Is(err, repository.ErrEmailAlreadyRegistered) {
-			return nil, ErrEmailAlreadyRegistered
+		if errors.Is(err, domain.ErrEmailAlreadyRegistered) {
+			return nil, domain.ErrEmailAlreadyRegistered
 		}
 		return nil, fmt.Errorf("create user: %w", err)
 	}
@@ -114,19 +113,19 @@ func (s *AuthService) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(req.Password))
-			return nil, ErrInvalidCredentials
+			return nil, domain.ErrInvalidCredentials
 		}
 		return nil, fmt.Errorf("fund user by email: %w", err)
 	}
 
 	if !user.IsActive {
-		return nil, ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

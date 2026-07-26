@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"furniture-api/internal/domain"
-	"furniture-api/internal/repository"
 )
 
 type CartRepository interface {
@@ -39,29 +38,29 @@ func NewCartService(cartRepo CartRepository, variantRepo ProductVariantRepositor
 
 func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.AddToCartRequest) error {
 	if req.Quantity <= 0 {
-		return ErrInvalidQuantity
+		return domain.ErrInvalidQuantity
 	}
 
 	if req.VariantID <= 0 {
-		return fmt.Errorf("variant id is required: %w", ErrInvalidVariantID)
+		return fmt.Errorf("variant id is required: %w", domain.ErrInvalidVariantID)
 	}
 
 	variant, err := s.variantRepo.GetVariantByID(ctx, req.VariantID)
 	if err != nil {
-		if errors.Is(err, repository.ErrVariantNotFound) {
-			return ErrVariantNotFound
+		if errors.Is(err, domain.ErrVariantNotFound) {
+			return domain.ErrVariantNotFound
 		}
 		return fmt.Errorf("get variant: %w", err)
 	}
 
 	if variant.StockQuantity < req.Quantity {
-		return ErrInsufficientStock
+		return domain.ErrInsufficientStock
 	}
 
 	product, err := s.productRepo.GetByID(ctx, variant.ProductID)
 	if err != nil {
-		if errors.Is(err, repository.ErrProductNotFound) {
-			return ErrProductNotFound
+		if errors.Is(err, domain.ErrProductNotFound) {
+			return domain.ErrProductNotFound
 		}
 		return fmt.Errorf("get product: %w", err)
 	}
@@ -75,12 +74,12 @@ func (s *CartService) AddToCart(ctx context.Context, userID int, req *domain.Add
 	existingItem, err := s.cartRepo.GetCartItem(ctx, cart.ID, req.VariantID)
 	if err == nil {
 		existingQty = existingItem.Quantity
-	} else if !errors.Is(err, repository.ErrCartItemNotFound) {
+	} else if !errors.Is(err, domain.ErrCartItemNotFound) {
 		return fmt.Errorf("check existing cart item: %w", err)
 	}
 
 	if variant.StockQuantity < (existingQty + req.Quantity) {
-		return ErrInsufficientStock
+		return domain.ErrInsufficientStock
 	}
 
 	PriceAtTime := product.BasePrice + variant.AdditionalPrice
@@ -104,8 +103,8 @@ func (s *CartService) GetCart(ctx context.Context, userID int) (*domain.Cart, er
 func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, quantity int) error {
 	if quantity <= 0 {
 		if err := s.cartRepo.RemoveItem(ctx, userID, cartItemID); err != nil {
-			if errors.Is(err, repository.ErrCartItemNotFound) {
-				return ErrCartItemNotFound
+			if errors.Is(err, domain.ErrCartItemNotFound) {
+				return domain.ErrCartItemNotFound
 			}
 			return fmt.Errorf("remove item: %w", err)
 		}
@@ -114,27 +113,27 @@ func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, qu
 
 	cartItem, err := s.cartRepo.GetCartItemByID(ctx, userID, cartItemID)
 	if err != nil {
-		if errors.Is(err, repository.ErrCartItemNotFound) {
-			return ErrCartItemNotFound
+		if errors.Is(err, domain.ErrCartItemNotFound) {
+			return domain.ErrCartItemNotFound
 		}
 		return fmt.Errorf("get cart item by id: %w", err)
 	}
 
 	variant, err := s.variantRepo.GetVariantByID(ctx, cartItem.VariantID)
 	if err != nil {
-		if errors.Is(err, repository.ErrVariantNotFound) {
-			return ErrVariantNotFound
+		if errors.Is(err, domain.ErrVariantNotFound) {
+			return domain.ErrVariantNotFound
 		}
 		return fmt.Errorf("get variant: %w", err)
 	}
 
 	if variant.StockQuantity < quantity {
-		return ErrInsufficientStock
+		return domain.ErrInsufficientStock
 	}
 
 	if err := s.cartRepo.UpdateItemQuantity(ctx, userID, cartItemID, quantity); err != nil {
-		if errors.Is(err, repository.ErrCartItemNotFound) {
-			return ErrCartItemNotFound
+		if errors.Is(err, domain.ErrCartItemNotFound) {
+			return domain.ErrCartItemNotFound
 		}
 		return fmt.Errorf("update item quantity: %w", err)
 	}
@@ -144,8 +143,8 @@ func (s *CartService) UpdateQuantity(ctx context.Context, userID, cartItemID, qu
 
 func (s *CartService) RemoveItem(ctx context.Context, userID, cartItemID int) error {
 	if err := s.cartRepo.RemoveItem(ctx, userID, cartItemID); err != nil {
-		if errors.Is(err, repository.ErrCartItemNotFound) {
-			return ErrCartItemNotFound
+		if errors.Is(err, domain.ErrCartItemNotFound) {
+			return domain.ErrCartItemNotFound
 		}
 		return fmt.Errorf("remove item: %w", err)
 	}

@@ -27,7 +27,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	result, err := r.db.NamedExecContext(ctx, query, user)
 	if err != nil {
 		if isDuplicateKeyError(err, "email") {
-			return ErrEmailAlreadyRegistered
+			return domain.ErrEmailAlreadyRegistered
 		}
 		if isDuplicateKeyError(err, "public_id") {
 			return fmt.Errorf("public id collision: %w", err)
@@ -65,7 +65,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	err := r.db.GetContext(ctx, &user, query, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("find user by email: %w", err)
 	}
@@ -82,7 +82,7 @@ func (r *userRepository) FindById(ctx context.Context, id int) (*domain.User, er
 	err := r.db.GetContext(ctx, &user, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("find user by ID: %w", err)
 	}
@@ -99,7 +99,7 @@ func (r *userRepository) FindByPublicID(ctx context.Context, publicID string) (*
 	err := r.db.GetContext(ctx, &user, query, publicID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("find user by public ID: %w", err)
 	}
@@ -120,7 +120,7 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 		return fmt.Errorf("update user: %w", err)
 	}
 	if rows == 0 {
-		return ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return err

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"furniture-api/internal/domain"
 	"furniture-api/internal/response"
-	"furniture-api/internal/service"
 	"log"
 	"net/http"
 	"strconv"
@@ -67,8 +66,9 @@ func (h *ProductHandler) GetProductBySlug(w http.ResponseWriter, r *http.Request
 
 	product, err := h.productService.GetBySlug(r.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrProductNotFound) {
-			response.WriteError(w, http.StatusNotFound, "product not found")
+		var appErr *domain.AppError
+		if errors.As(err, &appErr) {
+			response.WriteError(w, appErr.Status, appErr.Message)
 			return
 		}
 		log.Printf("get product by slug %q: %v", slug, err)
