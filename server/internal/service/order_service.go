@@ -113,7 +113,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 	defer tx.Rollback()
 
 	if len(req.CartItemIDs) == 0 {
-		return nil, errors.New("Please choose an item first")
+		return nil, domain.ErrCartSelectionEmpty
 	}
 
 	cartItems, err := s.cartRepo.GetCartItemsByIDsTx(ctx, tx, userID, req.CartItemIDs)
@@ -125,7 +125,7 @@ func (s *OrderService) Checkout(ctx context.Context, userID int, req *domain.Che
 	}
 
 	if len(cartItems) != len(req.CartItemIDs) {
-		return nil, errors.New("One of the item is invalid or no longer exist in the cart")
+		return nil, domain.ErrCartSelectionInvalid
 	}
 
 	cartID := cartItems[0].CartID

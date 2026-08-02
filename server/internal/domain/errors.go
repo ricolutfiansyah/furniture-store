@@ -38,6 +38,8 @@ var (
 	ErrInvalidOrderStatus      = &AppError{Code: "invalid_order_status", Message: "invalid order status", Status: http.StatusBadRequest}
 	ErrInvalidStatusTransition = &AppError{Code: "invalid_status_transition", Message: "invalid order status transition", Status: http.StatusConflict}
 
-	ErrFullNameRequired = &AppError{Code: "full_name_required", Message: "full name must be filled before checkout", Status: http.StatusUnprocessableEntity}
-	ErrPhoneRequired    = &AppError{Code: "phone_required", Message: "phone number must be filled before checkout", Status: http.StatusUnprocessableEntity}
+	ErrFullNameRequired     = &AppError{Code: "full_name_required", Message: "full name must be filled before checkout", Status: http.StatusUnprocessableEntity}
+	ErrPhoneRequired        = &AppError{Code: "phone_required", Message: "phone number must be filled before checkout", Status: http.StatusUnprocessableEntity}
+	ErrCartSelectionEmpty   = &AppError{Code: "cart_selection_empty", Message: "cart selection is empty", Status: http.StatusBadRequest}
+	ErrCartSelectionInvalid = &AppError{Code: "cart_selection_invalid", Message: "some items are invalid or no longer in your cart", Status: http.StatusBadRequest}
 )

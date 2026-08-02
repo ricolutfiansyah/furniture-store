@@ -30,9 +30,9 @@ type AuthService struct {
 	jwtSecret string
 }
 
-func NewAuthService(r UserRepository, jwtSecret string) *AuthService {
+func NewAuthService(userRepo UserRepository, jwtSecret string) *AuthService {
 	return &AuthService{
-		userRepo:  r,
+		userRepo:  userRepo,
 		jwtSecret: jwtSecret,
 	}
 }
